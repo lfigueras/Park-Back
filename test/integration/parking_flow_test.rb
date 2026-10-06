@@ -24,6 +24,8 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_select 'meta[property="og:description"]'
     assert_select 'meta[property="og:image"][content=?]', "http://www.example.com/parkback-share.png"
     assert_select 'meta[name="twitter:card"][content="summary_large_image"]'
+    assert_select 'link[rel="icon"][href="/icon.png?v=2"]'
+    assert_select 'link[rel="icon"][href="/icon.svg?v=2"]'
   end
 
   test "saving a spot then visiting root redirects to find-my-car" do
