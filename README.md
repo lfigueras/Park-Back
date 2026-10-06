@@ -58,6 +58,14 @@ Then open http://localhost:3000.
 > heading uses device orientation and only moves on a real phone (iOS asks for
 > permission via the "Enable it" button).
 
+## Production deployment
+
+The production app is hosted on Render and uses Neon Postgres. Set
+`RAILS_MASTER_KEY` from `config/master.key` and `DATABASE_URL` to the pooled
+connection string for Neon’s `production` branch in the Render environment.
+Keep the database URL secret. The pooled endpoint requires prepared statements
+to be disabled, as configured in `config/database.yml`.
+
 ## Running tests
 
 ```bash
