@@ -18,4 +18,4 @@ services:
       - key: PORT
         value: "10000"
       - key: SOLID_QUEUE_IN_PUMA
-        value: "true"          # run the job supervisor inside Puma (no separate worker)
+        value: "false"         # ParkBack currently has no background jobs to process
