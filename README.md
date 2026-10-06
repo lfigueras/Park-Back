@@ -7,6 +7,8 @@ you back. Save your GPS spot with a tap, add a few details and a photo, then let
 ParkBack show you the distance, direction, and a map back to your vehicle.
 
 <p align="center">
+  <img src="docs/screenshots/save.png" alt="ParkBack – Save Parking Location screen" width="300">
+  &nbsp;&nbsp;
   <img src="docs/screenshots/find.png" alt="ParkBack – Find My Car screen" width="300">
 </p>
 
