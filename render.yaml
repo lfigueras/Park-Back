@@ -1,4 +1,7 @@
 # Render Blueprint for ParkBack — deployed as a Docker service (same setup as the portfolio).
+# Render's free tier allows only ONE free Postgres per account (used by the portfolio),
+# so ParkBack uses an external free Postgres (e.g. Neon). Paste its connection string
+# into the DATABASE_URL env var in the Render dashboard.
 # https://render.com/docs/blueprint-spec
 services:
   - type: web
@@ -9,19 +12,10 @@ services:
     healthCheckPath: /up
     envVars:
       - key: RAILS_MASTER_KEY
-        sync: false            # paste the contents of config/master.key in the Render dashboard
+        sync: false            # paste the contents of config/master.key
       - key: DATABASE_URL
-        fromDatabase:
-          name: parkback-db
-          property: connectionString
+        sync: false            # paste your external Postgres URL (Neon/Supabase), sslmode=require
       - key: PORT
         value: "10000"
       - key: SOLID_QUEUE_IN_PUMA
         value: "true"          # run the job supervisor inside Puma (no separate worker)
-
-databases:
-  - name: parkback-db
-    databaseName: parkback_production
-    user: parkback
-    plan: free
-    region: singapore
