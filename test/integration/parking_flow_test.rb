@@ -64,6 +64,25 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "clearing a motorcycle shows a motorcycle-specific notice" do
+    post parking_locations_path, params: {
+      parking_location: {
+        latitude: 14.585,
+        longitude: 121.056,
+        slot: "B2-147",
+        vehicle_type: "motorcycle"
+      }
+    }, headers: modern_headers
+    created = ParkingLocation.last
+
+    delete parking_location_path(created), headers: modern_headers
+    assert_redirected_to root_path
+    follow_redirect!
+
+    assert_response :success
+    assert_match "glad you found your motorcycle!", response.body
+  end
+
   test "saving is rejected when no detail is provided" do
     assert_no_difference -> { ParkingLocation.count } do
       post parking_locations_path, params: {

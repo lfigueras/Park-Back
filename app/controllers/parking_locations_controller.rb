@@ -34,8 +34,9 @@ class ParkingLocationsController < ApplicationController
   end
 
   def destroy
+    vehicle_type = @parking_location.vehicle_type
     @parking_location.destroy
-    redirect_to root_path, notice: "Nice \u2014 glad you found your car!"
+    redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}!"
   end
 
   private
