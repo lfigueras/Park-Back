@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f1efe7"/>
+  <path d="M0 506h1200v124H0z" fill="#e3e8e6"/>
+  <path d="M0 551h1200M0 594h1200" stroke="#cbd5d2" stroke-width="2"/>
+  <path d="M60 520v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90m95-90v90" stroke="#fff" stroke-width="4" stroke-dasharray="12 12"/>
+  <rect x="40" y="40" width="1120" height="550" rx="28" fill="#fff"/>
+  <path d="M770 40h362a28 28 0 0 1 28 28v494a28 28 0 0 1-28 28H770z" fill="#23364a"/>
+  <g transform="translate(837 166) scale(0.5)">
+    <rect width="512" height="512" rx="192" fill="#3a5f97"/>
+    <path d="M256 149c-48 0-87 39-87 87 0 64 87 140 87 140s87-76 87-140c0-48-39-87-87-87Z" fill="#fff"/>
+    <circle cx="256" cy="236" r="32" fill="#3a5f97"/>
+  </g>
+  <path d="M812 478h212" stroke="#6f9ebe" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 18"/>
+  <circle cx="813" cy="478" r="11" fill="#e3f4e9"/>
+  <circle cx="1025" cy="478" r="11" fill="#e3f4e9"/>
+  <text x="96" y="152" fill="#23364a" font-family="DejaVu Sans, sans-serif" font-size="32" font-weight="700">PARKING, REMEMBERED</text>
+  <text x="92" y="270" fill="#23364a" font-family="DejaVu Sans, sans-serif" font-size="78" font-weight="700">ParkBack</text>
+  <text x="98" y="340" fill="#3a5f97" font-family="DejaVu Sans, sans-serif" font-size="38" font-weight="600">Find your way back.</text>
+  <text x="98" y="405" fill="#5b6b76" font-family="DejaVu Sans, sans-serif" font-size="25">Save your parking spot. Get back with confidence.</text>
+  <rect x="98" y="458" width="315" height="54" rx="27" fill="#e3f4e9"/>
+  <circle cx="126" cy="485" r="8" fill="#34775b"/>
+  <text x="148" y="494" fill="#315d4a" font-family="DejaVu Sans, sans-serif" font-size="20" font-weight="600">GPS · COMPASS · MAP</text>
+</svg>

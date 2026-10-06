@@ -1,7 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "ParkBack" %></title>
+    <% page_title = content_for(:title).presence || "ParkBack" %>
+    <% page_description = "ParkBack helps you remember where you parked and find your way back with GPS." %>
+    <% share_image_url = "#{request.base_url}/parkback-share.png" %>
+    <title><%= page_title %></title>
+    <meta name="description" content="<%= page_description %>">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ParkBack">
+    <meta property="og:title" content="<%= page_title %>">
+    <meta property="og:description" content="<%= page_description %>">
+    <meta property="og:url" content="<%= request.base_url + request.path %>">
+    <meta property="og:image" content="<%= share_image_url %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="ParkBack helps you find your way back to your parked vehicle.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= page_title %>">
+    <meta name="twitter:description" content="<%= page_description %>">
+    <meta name="twitter:image" content="<%= share_image_url %>">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="ParkBack">

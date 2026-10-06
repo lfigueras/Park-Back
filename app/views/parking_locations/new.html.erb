@@ -1,4 +1,4 @@
-<% content_for :title, "Save Parking Location · ParkBack" %>
+<% content_for :title, "ParkBack" %>
 
 <div data-controller="locator">
   <%= form_with model: @parking_location, url: parking_locations_path, method: :post, html: { multipart: true, class: "space-y-5", data: { action: "input->locator#refreshSubmit change->locator#refreshSubmit" } } do |f| %>

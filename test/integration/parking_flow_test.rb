@@ -14,6 +14,18 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller=locator]"
   end
 
+  test "root includes social sharing metadata" do
+    get root_path, headers: modern_headers
+
+    assert_response :success
+    assert_select 'meta[property="og:site_name"][content="ParkBack"]'
+    assert_select "title", "ParkBack"
+    assert_select 'meta[property="og:title"][content="ParkBack"]'
+    assert_select 'meta[property="og:description"]'
+    assert_select 'meta[property="og:image"][content=?]', "http://www.example.com/parkback-share.png"
+    assert_select 'meta[name="twitter:card"][content="summary_large_image"]'
+  end
+
   test "saving a spot then visiting root redirects to find-my-car" do
     assert_difference -> { ParkingLocation.count }, 1 do
       post parking_locations_path, params: {
