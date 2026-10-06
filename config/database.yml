@@ -88,6 +88,9 @@ production:
   primary: &primary_production
     <<: *default
     url: <%= ENV["DATABASE_URL"] %>
+    # Neon's pooled endpoint uses PgBouncer (transaction mode), which doesn't
+    # support server-side prepared statements.
+    prepared_statements: false
   cache:
     <<: *primary_production
     migrations_paths: db/cache_migrate
