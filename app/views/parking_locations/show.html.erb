@@ -1,0 +1,81 @@
+<% content_for :title, "Find My Car · ParkBack" %>
+
+<div
+  data-controller="finder"
+  data-finder-car-lat-value="<%= @parking_location.latitude %>"
+  data-finder-car-lng-value="<%= @parking_location.longitude %>"
+  data-finder-saved-at-value="<%= @parking_location.saved_at.iso8601 %>"
+  data-finder-vehicle-value="<%= @parking_location.vehicle_type %>"
+  class="space-y-4"
+>
+  <section class="space-y-2 text-center">
+    <h1 class="text-2xl font-bold text-ink">Find your <%= @parking_location.vehicle_type %></h1>
+    <p data-finder-target="status" class="text-sm text-slate-500">Locating you…</p>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-navy px-3 py-1 text-xs font-medium capitalize text-white">
+      <%= vehicle_icon(@parking_location.vehicle_type, css: "size-4") %>
+      <%= @parking_location.vehicle_type %>
+    </span>
+  </section>
+
+  <%# Compass + distance %>
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex flex-col items-center justify-center rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+      <div class="relative grid size-24 place-items-center rounded-full bg-mist/50 ring-1 ring-mist">
+        <span class="absolute top-1 text-[10px] font-semibold text-steel">N</span>
+        <div data-finder-target="arrow" class="transition-transform duration-300 ease-out will-change-transform">
+          <svg viewBox="0 0 24 24" class="size-10 text-navy drop-shadow-sm" aria-hidden="true">
+            <path d="M12 2 19 20 12 16 5 20Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Heading <span data-finder-target="bearing" class="font-semibold text-ink">—</span></p>
+    </div>
+
+    <div class="flex flex-col items-center justify-center rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+      <p class="text-4xl font-bold tabular-nums text-navy"><span data-finder-target="distance">—</span></p>
+      <p data-finder-target="distanceUnit" class="text-xs text-slate-500">away</p>
+      <p class="mt-3 text-xs text-slate-400">Parked <span data-finder-target="elapsed" class="font-semibold text-slate-600">—</span> ago</p>
+    </div>
+  </div>
+
+  <p data-finder-target="compassNote" class="text-center text-xs text-slate-500">
+    Compass not moving?
+    <button type="button" data-action="finder#enableCompass" class="font-medium text-navy underline">Enable it</button>
+  </p>
+
+  <%# Map %>
+  <div data-finder-target="map" class="h-72 w-full overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200/70"></div>
+
+  <%# Saved details %>
+  <% if @parking_location.photo.attached? %>
+    <%= image_tag @parking_location.photo, class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
+  <% end %>
+
+  <% details = {
+       "Mall / building" => @parking_location.mall,
+       "Floor" => @parking_location.floor,
+       "Section / zone" => @parking_location.section,
+       "Slot" => @parking_location.slot,
+       "Landmark" => @parking_location.landmark
+     }.reject { |_, v| v.blank? } %>
+
+  <% if details.any? %>
+    <dl class="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <% details.each do |label, value| %>
+        <div class="flex items-start justify-between gap-4 px-4 py-3">
+          <dt class="text-sm text-slate-500"><%= label %></dt>
+          <dd class="text-right text-sm font-medium text-slate-900"><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <div class="flex items-center gap-3 pt-1">
+    <%= button_to "I found my #{@parking_location.vehicle_type}", parking_location_path(@parking_location), method: :delete,
+          class: "flex-1 rounded-2xl bg-steel px-4 py-4 text-center text-base font-semibold text-white shadow-lg shadow-steel/30 transition active:scale-[0.99]" %>
+  </div>
+
+  <p class="pb-2 text-center text-xs text-slate-400">
+    <%= link_to "Save a different spot", new_parking_location_path, class: "underline hover:text-slate-600" %>
+  </p>
+</div>
