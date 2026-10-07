@@ -24,21 +24,32 @@ class PrivacyController < ApplicationController
   end
 
   def update
+    store_preferences(analytics: params[:analytics] == "1", maps: params[:maps] == "1")
+    clear_analytics_cookies if params[:analytics] != "1"
+    flash[:privacy_choices_changed] = true
+    redirect_to root_path, notice: "Privacy choices saved.", status: :see_other
+  end
+
+  def enable_maps
+    return render json: { maps: false } if privacy_preferences["maps"] == false
+
+    store_preferences(analytics: analytics_allowed?, maps: true)
+    render json: { maps: true }
+  end
+
+  private
+
+  def store_preferences(analytics:, maps:)
     cookies.signed[:parkback_privacy] = {
       value: {
         version: ParkingLocation::PRIVACY_NOTICE_VERSION,
-        analytics: params[:analytics] == "1",
-        maps: params[:maps] == "1",
+        analytics: analytics,
+        maps: maps,
         chosen_at: Time.current.iso8601
       },
       expires: 180.days.from_now, httponly: true, secure: request.ssl?, same_site: :lax
     }
-    clear_analytics_cookies if params[:analytics] != "1"
-    flash[:privacy_choices_changed] = true
-    redirect_to privacy_path, notice: "Privacy choices saved.", status: :see_other
   end
-
-  private
 
   def clear_analytics_cookies
     request.cookies.keys.grep(/\A_ga(?:_|\z)/).each do |name|
@@ -52,6 +63,6 @@ class PrivacyController < ApplicationController
 
   def prevent_caching
     response.headers["Cache-Control"] = "no-store, private"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Referrer-Policy"] = "same-origin"
   end
 end

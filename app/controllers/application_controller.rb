@@ -23,7 +23,7 @@ class ApplicationController < ActionController::Base
   end
 
   def maps_allowed?
-    privacy_preferences["maps"] == true
+    privacy_preferences["maps"] != false
   end
 
   def analytics_allowed?

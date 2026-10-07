@@ -8,97 +8,148 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     { "HTTP_USER_AGENT" => CHROME_UA }
   end
 
-  test "photo gallery fails closed without credentials and rejects unauthenticated requests" do
-    previous_username = ENV["PHOTO_ADMIN_USERNAME"]
-    previous_password = ENV["PHOTO_ADMIN_PASSWORD"]
-    ENV.delete("PHOTO_ADMIN_USERNAME")
-    ENV.delete("PHOTO_ADMIN_PASSWORD")
-
-    get admin_photos_path, headers: modern_headers
-    assert_response :not_found
-    assert_equal %w[no-store private], response.headers["Cache-Control"].split(", ").sort
-
-    ENV["PHOTO_ADMIN_USERNAME"] = "photo-admin"
-    ENV["PHOTO_ADMIN_PASSWORD"] = "test-only-password"
-    get admin_photos_path, headers: modern_headers
-    assert_response :unauthorized
-
-    wrong_auth = ActionController::HttpAuthentication::Basic.encode_credentials("photo-admin", "wrong-password")
-    get admin_photos_path, headers: modern_headers.merge("HTTP_AUTHORIZATION" => wrong_auth)
-    assert_response :unauthorized
-    get admin_photo_path(1), headers: modern_headers
-    assert_response :unauthorized
-  ensure
-    ENV["PHOTO_ADMIN_USERNAME"] = previous_username
-    ENV["PHOTO_ADMIN_PASSWORD"] = previous_password
-  end
-
-  test "photo gallery and original files require admin authentication and handle missing files" do
-    previous_username = ENV["PHOTO_ADMIN_USERNAME"]
-    previous_password = ENV["PHOTO_ADMIN_PASSWORD"]
-    previous_gallery_enabled = ENV["PHOTO_ADMIN_ENABLED"]
-    previous_measurement_id = ENV["GA4_MEASUREMENT_ID"]
-    previous_environment = Rails.env
-    ENV["PHOTO_ADMIN_USERNAME"] = "photo-admin"
-    ENV["PHOTO_ADMIN_PASSWORD"] = "test-only-password"
-    ENV["PHOTO_ADMIN_ENABLED"] = "true"
-    ENV["GA4_MEASUREMENT_ID"] = "G-TEST123456"
-    authorization = ActionController::HttpAuthentication::Basic.encode_credentials("photo-admin", "test-only-password")
-    headers = modern_headers.merge("HTTP_AUTHORIZATION" => authorization)
-    parking_location = ParkingLocation.create!(latitude: 14.5, longitude: 121.0,
-      browser_token: "gallery-test-browser", saved_at: Time.current, vehicle_type: "car", slot: "A1")
-    photo_data = Base64.strict_decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=")
-    parking_location.photo.attach(io: StringIO.new(photo_data), filename: "parking.png", content_type: "image/png")
-
-    Rails.env = "production"
-    get admin_photos_path, headers: headers
-    assert_response :success
-    assert_select "h1", "Saved photos"
-    assert_select "img[src=?]", admin_photo_path(parking_location), count: 1
-    assert_select 'meta[name="ga4-measurement-id"]', count: 0
-    assert_equal %w[no-store private], response.headers["Cache-Control"].split(", ").sort
-    assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
-    assert_not_includes response.body, "gallery-test-browser"
-
-    get admin_photo_path(parking_location), headers: headers
-    assert_response :success
-    assert_equal "image/png", response.media_type
-    assert_equal photo_data, response.body.b
-
-    parking_location.photo.blob.service.delete(parking_location.photo.blob.key)
-    get admin_photo_path(parking_location), headers: headers
-    assert_response :not_found
-    get admin_photos_path, headers: headers
-    assert_response :success
-    assert_includes response.body, "File unavailable"
-    assert_select "img[src=?]", admin_photo_path(parking_location), count: 0
-  ensure
-    Rails.env = previous_environment
-    ENV["PHOTO_ADMIN_USERNAME"] = previous_username
-    ENV["PHOTO_ADMIN_PASSWORD"] = previous_password
-    ENV["PHOTO_ADMIN_ENABLED"] = previous_gallery_enabled
-    ENV["GA4_MEASUREMENT_ID"] = previous_measurement_id
-    parking_location&.photo&.purge
-  end
-
   test "root shows the save form when no car is saved" do
     get root_path, headers: modern_headers
     assert_response :success
     assert_select "[data-controller=locator]"
   end
 
-  test "admin photo access is disabled by default in production" do
-    previous_environment = Rails.env
-    previous_gallery_enabled = ENV["PHOTO_ADMIN_ENABLED"]
-    Rails.env = "production"
-    ENV.delete("PHOTO_ADMIN_ENABLED")
-    get admin_photos_path, headers: modern_headers
-    assert_response :not_found
-    get admin_photo_path(1), headers: modern_headers
-    assert_response :not_found
+  test "release pages enforce a restricted content security policy" do
+    get root_path, headers: modern_headers
+    assert_response :success
+    policy = response.headers["Content-Security-Policy"]
+    assert_includes policy, "default-src 'self'"
+    assert_includes policy, "object-src 'none'"
+    assert_includes policy, "frame-ancestors 'none'"
+    assert_includes policy, "form-action 'self'"
+    script_policy = policy.split(";").find { |directive| directive.strip.start_with?("script-src ") }
+    assert_not_includes script_policy, "'unsafe-inline'"
+    assert_not_includes script_policy, "'unsafe-eval'"
+    assert_includes script_policy, "'nonce-"
+    assert_select 'script[type="importmap"][nonce]'
+    assert_select 'script[type="module"][nonce]'
+
+    get privacy_path, headers: modern_headers
+    assert_response :success
+    assert response.headers["Content-Security-Policy"].present?
+  end
+
+  test "privacy information is next to the location button without a blocking introduction" do
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_select "#privacy-introduction", count: 0
+    assert_select 'button[data-action="locator#locate"][aria-describedby="location-privacy-note"]'
+    assert_select "#location-privacy-note" do
+      assert_select 'a[href="/privacy"][data-turbo="false"]', "Turn maps off"
+    end
+    assert_includes response.body, "OpenStreetMap receives your IP address and map area."
+    assert_select 'script[src*="googletagmanager.com"]', count: 0
+    assert_select 'script[src*="unpkg.com"]', count: 1
+  end
+
+  test "maps are shown by default without requesting GPS or enabling analytics" do
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_select '[data-locator-maps-declined-value="false"]'
+    assert_select '[data-locator-target="map"]:not(.hidden)'
+    assert_select '[data-locator-target="status"]', "Location not requested"
+    assert_select 'script[src*="unpkg.com"]', count: 1
+    assert_select 'script[src*="googletagmanager.com"]', count: 0
+
+    patch privacy_preferences_path, params: {}, headers: modern_headers
+    follow_redirect!
+    assert_select '[data-locator-maps-declined-value="true"]'
+    assert_select '[data-locator-target="map"].hidden'
+    assert_select 'script[src*="unpkg.com"]', count: 0
+  end
+
+  test "privacy and parking forms work with CSRF protection enabled" do
+    previous_forgery_protection = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    origin_headers = modern_headers.merge("HTTP_ORIGIN" => "http://www.example.com")
+
+    get privacy_path, headers: modern_headers
+    assert_response :success
+    assert_equal "same-origin", response.headers["Referrer-Policy"]
+    token = Nokogiri::HTML(response.body).at_css('form[action="/privacy/preferences"] input[name="authenticity_token"]')["value"]
+    patch privacy_preferences_path, params: { authenticity_token: token, maps: "1" }, headers: origin_headers
+    assert_redirected_to root_path
+    follow_redirect!
+    assert_select "[data-controller=locator]"
+    assert_includes response.body, "Privacy choices saved."
+    get privacy_path, headers: modern_headers
+    assert_select 'input[name="maps"][checked]', count: 1
+
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_equal "strict-origin-when-cross-origin", response.headers["Referrer-Policy"]
+    token = Nokogiri::HTML(response.body).at_css('form[action="/parking_locations"] input[name="authenticity_token"]')["value"]
+    post parking_locations_path, params: {
+      authenticity_token: token,
+      parking_location: { latitude: 14.5, longitude: 121.0, slot: "csrf-test-slot" }
+    }, headers: origin_headers
+    assert_redirected_to parking_location_path(ParkingLocation.last)
   ensure
-    Rails.env = previous_environment
-    ENV["PHOTO_ADMIN_ENABLED"] = previous_gallery_enabled
+    ActionController::Base.allow_forgery_protection = previous_forgery_protection
+  end
+
+  test "location-button map permission does not grant analytics consent" do
+    previous_forgery_protection = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    get root_path, headers: modern_headers
+    assert_select '[data-locator-map-permission-url-value="/privacy/maps"]'
+    assert_select '[data-locator-target="map"]:not(.hidden)'
+    assert_select 'script[src*="unpkg.com"]', count: 1
+    assert_includes response.body, "OpenStreetMap receives your IP address and map area."
+
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+    headers = modern_headers.merge("HTTP_ACCEPT" => "application/json",
+      "HTTP_X_CSRF_TOKEN" => token, "HTTP_ORIGIN" => "http://www.example.com")
+    patch privacy_maps_path, headers: headers
+    assert_response :success
+    assert_equal true, JSON.parse(response.body)["maps"]
+    get privacy_path, headers: modern_headers
+    assert_select 'input[name="maps"][checked]', count: 1
+    assert_select 'input[name="analytics"][checked]', count: 0
+
+    patch privacy_preferences_path, params: { analytics: "1", maps: "0" }, headers: headers
+    patch privacy_maps_path, headers: headers
+    assert_response :success
+    assert_equal false, JSON.parse(response.body)["maps"]
+    get privacy_path, headers: modern_headers
+    assert_select 'input[name="analytics"][checked]', count: 1
+    assert_select 'input[name="maps"][checked]', count: 0
+    get root_path, headers: modern_headers
+    assert_select '[data-locator-maps-declined-value="true"]'
+    assert_select 'script[src*="unpkg.com"]', count: 0
+    assert_includes response.body, "Maps are off by your choice. GPS still works."
+  ensure
+    ActionController::Base.allow_forgery_protection = previous_forgery_protection
+  end
+
+  test "saving privacy choices returns home and preserves notification for an existing spot" do
+    post parking_locations_path, params: {
+      parking_location: { latitude: 14.5, longitude: 121.0, slot: "saved-spot" }
+    }, headers: modern_headers
+    record = ParkingLocation.last
+
+    patch privacy_preferences_path, params: { maps: "1" }, headers: modern_headers
+    assert_redirected_to root_path
+    follow_redirect!
+    assert_redirected_to parking_location_path(record)
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "Privacy choices saved."
+    assert_select 'meta[name="privacy-choices-updated"]', count: 1
+    assert_select '[data-finder-target="map"]', count: 1
+  end
+
+  test "admin photo gallery routes do not exist" do
+    %w[/admin/photos /admin/photos/1].each do |path|
+      assert_raises(ActionController::RoutingError) do
+        Rails.application.routes.recognize_path(path, method: :get)
+      end
+    end
   end
 
   test "browser identity is HttpOnly and parking details are filtered from logs" do
@@ -151,10 +202,10 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     get root_path, headers: modern_headers
     assert_response :success
     assert_select "script[src=?]", script_url, count: 0
-    assert_select 'link[href*="unpkg.com"]', count: 0
+    assert_select 'link[href*="unpkg.com"]', count: 1
 
     patch privacy_preferences_path, params: { analytics: "1", maps: "1" }, headers: modern_headers
-    assert_redirected_to privacy_path
+    assert_redirected_to root_path
     get root_path, headers: modern_headers
     assert_select "script[src=?][async]", script_url, count: 1
     assert_select 'meta[name="ga4-measurement-id"][content="G-TEST123456"]', count: 1
@@ -183,7 +234,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'a[href="mailto:lovelyfigueras@gmail.com"]'
     assert_select 'input[name="analytics"][checked]', count: 0
-    assert_select 'input[name="maps"][checked]', count: 0
+    assert_select 'input[name="maps"][checked]', count: 1
     assert_select 'script[src*="googletagmanager.com"]', count: 0
     assert_select 'script[src*="unpkg.com"]', count: 0
 
@@ -314,16 +365,60 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     other.assert_redirected_to root_path
   end
 
+  test "returning after hours preserves the spot even when its photo file disappears" do
+    post parking_locations_path, params: {
+      parking_location: { latitude: 14.5, longitude: 121.0, slot: "long-stay" }
+    }, headers: modern_headers
+    record = ParkingLocation.last
+    photo_data = Base64.strict_decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=")
+    record.photo.attach(io: StringIO.new(photo_data), filename: "parking.png", content_type: "image/png")
+
+    travel_to 12.hours.from_now do
+      get root_path, headers: modern_headers
+      assert_redirected_to parking_location_path(record)
+      follow_redirect!
+      assert_response :success
+      assert_select '[data-finder-car-lat-value="14.5"][data-finder-car-lng-value="121.0"]'
+      assert_select "img[src=?]", photo_parking_location_path(record), count: 1
+
+      record.photo.blob.service.delete(record.photo.blob.key)
+      get parking_location_path(record), headers: modern_headers
+      assert_response :success
+      assert_select "img[src=?]", photo_parking_location_path(record), count: 0
+      assert_includes response.body, "Photo file is unavailable."
+      assert_select "time[datetime=?]", record.saved_at.iso8601
+      assert_equal [ 14.5, 121.0 ], [ record.reload.latitude, record.longitude ]
+
+      get photo_parking_location_path(record), headers: modern_headers
+      assert_response :not_found
+    end
+  ensure
+    record&.photo&.purge
+  end
+
   test "clearing a saved spot deletes it" do
     post parking_locations_path, params: {
       parking_location: { latitude: 14.585, longitude: 121.056, slot: "B2-147" }
     }, headers: modern_headers
     created = ParkingLocation.last
+    photo_data = Base64.strict_decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=")
+    created.photo.attach(io: StringIO.new(photo_data), filename: "parking.png", content_type: "image/png")
+    blob = created.photo.blob
+
+    get parking_location_path(created), headers: modern_headers
+    assert_includes response.body, "deletes this spot's location, details and photo."
 
     assert_difference -> { ParkingLocation.count }, -1 do
       delete parking_location_path(created), headers: modern_headers
     end
     assert_redirected_to root_path
+    assert_not ActiveStorage::Blob.exists?(blob.id)
+    assert_not blob.service.exist?(blob.key)
+    follow_redirect!
+    assert_includes response.body, "Your saved spot and photo have been deleted."
+    assert_includes response.body, "Uncleared spots expire after seven days."
+  ensure
+    created&.photo&.purge if created && ParkingLocation.exists?(created.id)
   end
 
   test "clearing a motorcycle shows a motorcycle-specific notice" do

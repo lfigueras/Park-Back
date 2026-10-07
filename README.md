@@ -78,11 +78,11 @@ to be disabled, as configured in `config/database.yml`.
    URLs or form interactions. Do not install another Google tag or GTM snippet.
 3. Review the public notice at `/privacy` and configure provider retention and
    processing agreements before publishing. GA4 is off until the visitor opts in
-   at **Privacy & choices**. Maps require a separate opt-in. Withdrawal expires
+   at **Privacy & choices**. Maps are on by default and can be disabled there;
+   GPS still requires the location button. Withdrawal expires
    GA cookies and signals other open tabs to reload with optional services off.
    GA4 uses first-party analytics cookies; Google Signals and ad personalization
-   signals are disabled in this tag. No Google tag is loaded on privacy or admin
-   pages.
+   signals are disabled in this tag. No Google tag is loaded on privacy pages.
 4. In Render, open **ParkBack > Environment**, set `GA4_MEASUREMENT_ID` to `G-...`,
    remove `PLAUSIBLE_SCRIPT_URL` if previously set, and save/redeploy with these
    code changes. No analytics subscription or separate hosting is required.
@@ -103,37 +103,12 @@ devices can create another identity. No custom user ID is sent. Realtime shows
 recent activity, not necessarily every open tab. Consent choices and blockers
 can reduce counts, and traffic before installation is not recovered.
 
-### Private saved-photo viewer
-
-The read-only gallery is at `/admin/photos`. It uses the app's existing storage
-and requires no paid service. Set `PHOTO_ADMIN_USERNAME` and a strong, unique
-`PHOTO_ADMIN_PASSWORD` in Render's environment settings (or your local server
-environment). Enter these credentials directly in Render, not in chat or Git.
-If either value is missing, the gallery and its photo endpoints return 404.
-With both set, the browser prompts for HTTP Basic authentication.
-Production additionally requires `PHOTO_ADMIN_ENABLED=true`; without that
-explicit flag, the cancelled admin gallery remains disabled even if credentials
-exist. Leave this flag unset when deploying the privacy safeguards.
-
-The gallery lists photos attached to existing parking records, newest first,
-with 24 per page. Click a photo to open its original file. Gallery image links
-require the same admin authentication, and responses are marked private and
-non-cacheable. Google Analytics is excluded from admin pages. A missing upload
-is displayed as **File unavailable** rather than a broken image.
-
-This viewer does not change storage or recover lost uploads. Render's free
-service uses an ephemeral filesystem: redeploys, restarts, and spin-downs can
-erase local photo files while their attachment records remain in the database.
-Deploying this viewer can itself erase existing files. Do not redeploy to view
-current uploads until that risk is understood. Review privacy disclosures and
-access photos only for a legitimate purpose.
-
 ## Privacy safeguards and rollout
 
 - Browser ownership cookies are signed, HttpOnly, SameSite=Lax, and Secure on
    HTTPS, with a rolling seven-day expiry. Existing ownership tokens are preserved.
 - Public Active Storage routes are disabled. Parking photos require the owning
-   browser's cookie; admin endpoints fail closed without separate credentials.
+   browser's cookie. There is no admin photo gallery.
 - Parking pages, photos, and data exports are private and non-cacheable. GPS,
    parking details, upload parameters, and browser tokens are filtered from new
    application logs. Historical provider logs are not automatically erased.
@@ -159,6 +134,19 @@ and incident response. Confirm NPC registration requirements and the applicable
 legal basis with a qualified privacy professional. These code safeguards are not
 a certification of legal compliance. No source migration or paid plan is needed
 for the safeguards themselves, but redeploying Render can erase old local files.
+
+### Release checks
+
+Run `bin/rails test`, `bin/rubocop`, `bin/bundler-audit`, `bin/importmap audit`,
+and `bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error` before
+publishing. Check real-browser privacy submissions, saved map opt-out, GPS
+permission granted/denied, and returning to a saved spot after backgrounding.
+The enforced Content Security Policy restricts script providers and uses
+per-request nonces for Rails import maps; inline styles remain allowed for
+Leaflet positioning. Default-on maps contact providers before a privacy choice;
+the operator must assess and document the appropriate lawful basis. Passing
+technical checks does not verify contracts, backup restoration, provider
+retention settings, incident procedures, or NPC/DPO obligations.
 
 ## Running tests
 

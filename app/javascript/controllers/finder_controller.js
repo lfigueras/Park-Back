@@ -7,6 +7,7 @@ export default class extends Controller {
     carLat: Number,
     carLng: Number,
     savedAt: String,
+    expiresAt: String,
     vehicle: String
   }
 
@@ -21,19 +22,24 @@ export default class extends Controller {
     this.userMarker = null
     this.userCircle = null
     this.line = null
+    this.boundResume = this.refreshPosition.bind(this)
 
     this.initMap()
     this.startClock()
-    this.startWatching()
+    this.refreshPosition()
     this.bindCompass()
+    document.addEventListener("visibilitychange", this.boundResume)
+    window.addEventListener("pageshow", this.boundResume)
   }
 
   disconnect() {
     if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId)
     if (this.clock) clearInterval(this.clock)
     if (this.map) this.map.remove()
-    window.removeEventListener("deviceorientationabsolute", this.boundOrientation)
-    window.removeEventListener("deviceorientation", this.boundOrientation)
+    window.removeEventListener("deviceorientationabsolute", this.boundOrientation, true)
+    window.removeEventListener("deviceorientation", this.boundOrientation, true)
+    document.removeEventListener("visibilitychange", this.boundResume)
+    window.removeEventListener("pageshow", this.boundResume)
   }
 
   get car() {
@@ -54,8 +60,11 @@ export default class extends Controller {
   initMap() {
     if (!this.hasMapTarget || typeof L === "undefined") return
 
-    this.map = L.map(this.mapTarget, { zoomControl: true, attributionControl: false })
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(this.map)
+    this.map = L.map(this.mapTarget, { zoomControl: true })
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(this.map)
     this.map.setView(this.car, 18)
 
     const carIcon = L.divIcon({
@@ -92,7 +101,27 @@ export default class extends Controller {
     this.elapsedTarget.textContent = parts.join(" ")
   }
 
+  refreshPosition() {
+    if (document.visibilityState === "hidden") return
+    if (this.hasExpiresAtValue && Date.now() >= Date.parse(this.expiresAtValue)) {
+      window.location.reload()
+      return
+    }
+
+    this.renderElapsed()
+    this.heading = null
+    this.bearingToCar = null
+    if (this.hasDistanceTarget) this.distanceTarget.textContent = "--"
+    if (this.hasBearingTarget) this.bearingTarget.textContent = "--"
+    if (this.hasArrowTarget) this.arrowTarget.style.visibility = "hidden"
+    this.startWatching()
+  }
+
   startWatching() {
+    if (this.watchId !== null) {
+      navigator.geolocation.clearWatch(this.watchId)
+      this.watchId = null
+    }
     if (!("geolocation" in navigator)) {
       this.setStatus("Location services unavailable on this device.")
       return
@@ -113,6 +142,7 @@ export default class extends Controller {
     this.bearingToCar = this.bearing(latitude, longitude, this.carLatValue, this.carLngValue)
 
     this.renderDistance(distance)
+    if (this.hasArrowTarget) this.arrowTarget.style.visibility = ""
     this.renderBearing()
     this.setStatus(`You're here · ±${Math.round(accuracy)} m`)
     this.updateUserOnMap(user, accuracy)

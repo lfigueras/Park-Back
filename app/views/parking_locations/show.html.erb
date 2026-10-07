@@ -5,6 +5,7 @@
   data-finder-car-lat-value="<%= @parking_location.latitude %>"
   data-finder-car-lng-value="<%= @parking_location.longitude %>"
   data-finder-saved-at-value="<%= @parking_location.saved_at.iso8601 %>"
+  data-finder-expires-at-value="<%= (@parking_location.saved_at + ParkingLocation::RETENTION_DAYS.days).iso8601 %>"
   data-finder-vehicle-value="<%= @parking_location.vehicle_type %>"
   class="space-y-4"
 >
@@ -16,6 +17,11 @@
       <%= @parking_location.vehicle_type %>
     </span>
   </section>
+
+  <p class="text-center text-xs leading-5 text-slate-500">
+    Saved <time datetime="<%= @parking_location.saved_at.iso8601 %>"><%= @parking_location.saved_at.utc.strftime("%b %d, %Y at %H:%M UTC") %></time>.
+    Expires <%= (@parking_location.saved_at + ParkingLocation::RETENTION_DAYS.days).utc.strftime("%b %d at %H:%M UTC") %>.
+  </p>
 
   <%# Compass + distance %>
   <div class="grid grid-cols-2 gap-3">
@@ -43,6 +49,10 @@
     <button type="button" data-action="finder#enableCompass" class="font-medium text-navy underline">Enable it</button>
   </p>
 
+  <button type="button" data-action="finder#refreshPosition" class="mx-auto block rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-navy">
+    Refresh my location
+  </button>
+
   <%# Map %>
   <% if maps_allowed? %>
     <div data-finder-target="map" class="h-72 w-full overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200/70"></div>
@@ -52,7 +62,16 @@
 
   <%# Saved details %>
   <% if @parking_location.photo.attached? %>
-    <%= image_tag photo_parking_location_path(@parking_location), class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
+    <div data-controller="photo">
+      <% if @photo_available %>
+        <%= image_tag photo_parking_location_path(@parking_location), alt: "Saved parking photo",
+              data: { photo_target: "image", action: "error->photo#showUnavailable" },
+              class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
+      <% end %>
+      <p data-photo-target="unavailable" <%= "hidden" if @photo_available %> role="status" class="border-l-2 border-amber-400 pl-3 text-sm leading-6 text-slate-600">
+        Photo file is unavailable. Your saved parking location and details are still available.
+      </p>
+    </div>
   <% end %>
 
   <% details = {
@@ -78,6 +97,10 @@
     <%= button_to "I found my #{@parking_location.vehicle_type}", parking_location_path(@parking_location), method: :delete,
           class: "flex-1 rounded-2xl bg-steel px-4 py-4 text-center text-base font-semibold text-white shadow-lg shadow-steel/30 transition active:scale-[0.99]" %>
   </div>
+
+  <p class="text-center text-xs leading-5 text-slate-500">
+    Tapping "I found my <%= @parking_location.vehicle_type %>" deletes this spot's location, details and photo.
+  </p>
 
   <p class="pb-2 text-center text-xs text-slate-400">
     <%= link_to "Save a different spot", new_parking_location_path, class: "underline hover:text-slate-600" %>

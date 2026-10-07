@@ -7,6 +7,7 @@ class ParkingLocationsController < ApplicationController
   def index
     current = ParkingLocation.current_for(browser_token)
     if current
+      flash.keep if flash[:privacy_choices_changed]
       redirect_to parking_location_path(current)
     else
       @parking_location = ParkingLocation.new
@@ -32,6 +33,8 @@ class ParkingLocationsController < ApplicationController
 
   # "Find My Car" screen.
   def show
+    attachment = @parking_location.photo
+    @photo_available = attachment.attached? && attachment.blob.service.exist?(attachment.blob.key)
   end
 
   def photo
@@ -47,14 +50,14 @@ class ParkingLocationsController < ApplicationController
   def destroy
     vehicle_type = @parking_location.vehicle_type
     @parking_location.destroy_with_photo!
-    redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}!"
+    redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}! Your saved spot and photo have been deleted."
   end
 
   private
 
   def prevent_private_caching
     response.headers["Cache-Control"] = "no-store, private"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
   end
 
   def set_parking_location

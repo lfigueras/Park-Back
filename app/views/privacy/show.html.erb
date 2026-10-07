@@ -14,7 +14,7 @@
     </label>
     <label class="flex items-start gap-3">
       <%= check_box_tag :maps, "1", maps_allowed?, class: "mt-1 size-4 shrink-0 accent-[#3a5f97]" %>
-      <span><strong class="block text-ink">Optional maps</strong>Allow OpenStreetMap tiles and the map library from unpkg. Map requests reveal the displayed area and your IP address to these providers.</span>
+      <span><strong class="block text-ink">Optional maps</strong>Shown by default; uncheck to turn maps off. OpenStreetMap and unpkg receive your IP address, and tile requests reveal the displayed map area.</span>
     </label>
     <%= submit_tag "Save choices", class: "rounded-lg bg-navy px-4 py-2 font-semibold text-white" %>
   <% end %>
@@ -38,7 +38,7 @@
   </section>
   <section class="space-y-2">
     <h2 class="text-base font-semibold text-ink">Optional services</h2>
-    <p>Analytics and maps are disabled unless you select them above. Either can be refused without preventing GPS distance and direction from working. With analytics enabled, Google receives visit information such as sanitized page URLs, device information, and a cookie-based identifier. Parking coordinates, details, photos, and browser ownership tokens are not sent as analytics event properties.</p>
+    <p>Analytics stays disabled unless you select it above. Maps are shown by default unless you have saved a maps-off choice. This contacts OpenStreetMap and unpkg when the map loads, before GPS permission. Your GPS position is requested only when you tap "Use my location". A saved maps-off choice keeps maps off while GPS still works. Turning on maps does not turn on analytics. With analytics enabled, Google receives visit information such as sanitized page URLs, device information, and a cookie-based identifier. Parking coordinates, details, photos, and browser ownership tokens are not sent as analytics event properties.</p>
     <p>With maps enabled, OpenStreetMap receives requests for map tiles covering your parked and current positions. unpkg supplies the map library and receives network information. You can withdraw either choice here. Withdrawal stops future requests from newly loaded ParkBack pages, not data already received by providers. Close or reload other open tabs after withdrawing.</p>
   </section>
   <section class="space-y-2">
@@ -48,7 +48,8 @@
   </section>
   <section class="space-y-2">
     <h2 class="text-base font-semibold text-ink">Retention and deletion</h2>
-    <p>Parking spots expire seven days after saving. Expired spots are blocked from normal access and removed by the cleanup process; on free hosting, cleanup happens on subsequent requests or when the operator runs the cleanup task. It is not guaranteed to execute at the exact seven-day mark.</p>
+    <p>When you tap "I found my vehicle", that parking spot's saved location, details and attached photo are deleted immediately from the application's database and photo storage. You do not need to wait seven days. This does not erase separate provider logs, backups, or analytics records.</p>
+    <p>The seven-day limit is a fallback for spots you do not clear. These spots expire seven days after saving. Expired spots are blocked from normal access and removed by the cleanup process; on free hosting, cleanup happens on subsequent requests or when the operator runs the cleanup task. It is not guaranteed to execute at the exact seven-day mark.</p>
     <p>Use "Delete my parking data" to remove all records and photos linked to this browser, or clear an individual spot when you find your vehicle. The ownership cookie lasts up to seven days after use; the privacy-choice cookie lasts up to 180 days. Logs, backups, and optional analytics have separate provider retention settings that require operator management.</p>
     <p>Clearing cookies removes the link to your records, not necessarily the records themselves. If you lose that link, contact the privacy address; access or deletion requests require proportionate verification without disclosing another person's data.</p>
   </section>

@@ -15,14 +15,11 @@ Rails.application.routes.draw do
 
   get "privacy", to: "privacy#show"
   patch "privacy/preferences", to: "privacy#update", as: :privacy_preferences
+  patch "privacy/maps", to: "privacy#enable_maps", as: :privacy_maps
   get "privacy/data", to: "privacy#export", as: :privacy_data
   delete "privacy/data", to: "privacy#destroy"
 
   resources :parking_locations, only: %i[new create show destroy] do
     get :photo, on: :member
-  end
-
-  namespace :admin do
-    resources :photos, only: %i[index show]
   end
 end

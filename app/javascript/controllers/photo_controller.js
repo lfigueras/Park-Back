@@ -3,7 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 // Lets the user either take a new photo (camera) or upload one from their
 // gallery, backed by a single file input, with a live thumbnail preview.
 export default class extends Controller {
-  static targets = ["input", "preview", "image"]
+  static targets = ["input", "preview", "image", "unavailable"]
+
+  showUnavailable() {
+    if (this.hasImageTarget) this.imageTarget.hidden = true
+    if (this.hasUnavailableTarget) this.unavailableTarget.hidden = false
+  }
 
   // Open the camera directly.
   takePhoto() {
