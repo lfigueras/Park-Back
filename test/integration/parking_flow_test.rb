@@ -14,6 +14,37 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller=locator]"
   end
 
+  test "google analytics loads only in configured production" do
+    previous_measurement_id = ENV["GA4_MEASUREMENT_ID"]
+    previous_environment = Rails.env
+    ENV["GA4_MEASUREMENT_ID"] = "G-TEST123456"
+    script_url = "https://www.googletagmanager.com/gtag/js?id=G-TEST123456"
+
+    get root_path, headers: modern_headers
+    assert_select 'script[src=?]', script_url, count: 0
+    assert_select 'meta[name="ga4-measurement-id"]', count: 0
+
+    Rails.env = "production"
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_select 'script[src=?][async]', script_url, count: 1
+    assert_select 'meta[name="ga4-measurement-id"][content="G-TEST123456"]', count: 1
+    assert_not_includes response.body, "plausible"
+
+    ENV.delete("GA4_MEASUREMENT_ID")
+    get root_path, headers: modern_headers
+    assert_select 'script[src^="https://www.googletagmanager.com/"]', count: 0
+    assert_select 'meta[name="ga4-measurement-id"]', count: 0
+
+    ENV["GA4_MEASUREMENT_ID"] = "invalid-measurement-id"
+    get root_path, headers: modern_headers
+    assert_select 'script[src^="https://www.googletagmanager.com/"]', count: 0
+    assert_select 'meta[name="ga4-measurement-id"]', count: 0
+  ensure
+    Rails.env = previous_environment
+    ENV["GA4_MEASUREMENT_ID"] = previous_measurement_id
+  end
+
   test "root includes social sharing metadata" do
     get root_path, headers: modern_headers
 

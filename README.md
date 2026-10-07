@@ -66,6 +66,41 @@ connection string for Neon’s `production` branch in the Render environment.
 Keep the database URL secret. The pooled endpoint requires prepared statements
 to be disabled, as configured in `config/database.yml`.
 
+### Visitor analytics (Google Analytics 4)
+
+1. At https://analytics.google.com, create a free standard GA4 property for
+   ParkBack. Create a **Web** data stream with the public app URL and copy its
+   **Measurement ID** (`G-...`), not the numeric property or stream ID.
+2. In **Admin > Data streams > your web stream**, turn **Enhanced measurement**
+   off. Also check **Configure tag settings > Show all > Manage automatic event
+   detection** and turn off history-based page changes if enabled. ParkBack sends
+   pageviews itself; automatic collection can duplicate visits and collect raw
+   URLs or form interactions. Do not install another Google tag or GTM snippet.
+3. Review consent requirements and update your privacy notice before enabling
+   tracking. This integration does not include a consent banner or consent
+   management. If prior consent is required, keep the measurement ID unset until
+   consent-gated loading is implemented. GA4 uses first-party analytics cookies;
+   Google Signals and ad personalization signals are disabled in this tag.
+4. In Render, open **ParkBack > Environment**, set `GA4_MEASUREMENT_ID` to `G-...`,
+   remove `PLAUSIBLE_SCRIPT_URL` if previously set, and save/redeploy with these
+   code changes. No analytics subscription or separate hosting is required.
+5. Visit the public app, then open **Reports > Realtime** at
+   https://analytics.google.com. Use **Reports > Acquisition** for traffic sources
+   and **Reports > Engagement > Pages and screens** for pageviews. Standard
+   reports can take 24-48 hours to populate.
+
+Tracking runs only in production with a valid measurement ID and counts full
+page loads and Turbo visits. Query strings, URL fragments, and parking record
+IDs are excluded from tracked page and referrer URLs. No GPS coordinates,
+parking details, photos, or signed browser identifiers are added as event
+properties. Keep automatic collection disabled to preserve these safeguards.
+
+GA4 user counts estimate browsers/devices, not exact people. Its cookie-based
+client ID is not a login or permanent person ID: clearing cookies or changing
+devices can create another identity. No custom user ID is sent. Realtime shows
+recent activity, not necessarily every open tab. Consent choices and blockers
+can reduce counts, and traffic before installation is not recovered.
+
 ## Running tests
 
 ```bash

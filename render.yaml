@@ -14,6 +14,8 @@ services:
         sync: false            # paste the contents of config/master.key
       - key: DATABASE_URL
         sync: false            # set the existing Render Postgres internal URL
+      - key: GA4_MEASUREMENT_ID
+        sync: false
       - key: PORT
         value: "10000"
       - key: SOLID_QUEUE_IN_PUMA

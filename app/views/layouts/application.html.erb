@@ -27,6 +27,12 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <% ga4_measurement_id = ENV["GA4_MEASUREMENT_ID"].to_s.strip %>
+    <% if Rails.env.production? && ga4_measurement_id.match?(/\AG-[A-Z0-9]+\z/) %>
+      <%= tag.meta name: "ga4-measurement-id", content: ga4_measurement_id %>
+      <%= javascript_include_tag "https://www.googletagmanager.com/gtag/js?id=#{ga4_measurement_id}", async: true %>
+    <% end %>
+
     <%# Leaflet (OpenStreetMap) %>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
