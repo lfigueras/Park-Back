@@ -13,5 +13,16 @@ Rails.application.routes.draw do
   # root "posts#index"
   root "parking_locations#index"
 
-  resources :parking_locations, only: %i[new create show destroy]
+  get "privacy", to: "privacy#show"
+  patch "privacy/preferences", to: "privacy#update", as: :privacy_preferences
+  get "privacy/data", to: "privacy#export", as: :privacy_data
+  delete "privacy/data", to: "privacy#destroy"
+
+  resources :parking_locations, only: %i[new create show destroy] do
+    get :photo, on: :member
+  end
+
+  namespace :admin do
+    resources :photos, only: %i[index show]
+  end
 end

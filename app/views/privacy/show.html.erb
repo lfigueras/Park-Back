@@ -1,0 +1,61 @@
+<% content_for :title, "Privacy | ParkBack" %>
+
+<section class="space-y-6 pb-6 text-sm leading-6 text-slate-700">
+  <div class="border-b border-slate-200 pb-3">
+    <h1 class="text-xl font-bold text-ink">Privacy</h1>
+    <p class="text-xs text-slate-500">Notice version <%= ParkingLocation::PRIVACY_NOTICE_VERSION %></p>
+  </div>
+
+  <%= form_with url: privacy_preferences_path, method: :patch, data: { turbo: false }, class: "space-y-4 border-b border-slate-200 pb-6" do %>
+    <h2 class="text-base font-semibold text-ink">Your choices</h2>
+    <label class="flex items-start gap-3">
+      <%= check_box_tag :analytics, "1", analytics_allowed?, class: "mt-1 size-4 shrink-0 accent-[#3a5f97]" %>
+      <span><strong class="block text-ink">Optional analytics</strong>Allow Google Analytics to measure visits using analytics cookies.</span>
+    </label>
+    <label class="flex items-start gap-3">
+      <%= check_box_tag :maps, "1", maps_allowed?, class: "mt-1 size-4 shrink-0 accent-[#3a5f97]" %>
+      <span><strong class="block text-ink">Optional maps</strong>Allow OpenStreetMap tiles and the map library from unpkg. Map requests reveal the displayed area and your IP address to these providers.</span>
+    </label>
+    <%= submit_tag "Save choices", class: "rounded-lg bg-navy px-4 py-2 font-semibold text-white" %>
+  <% end %>
+
+  <section class="space-y-3 border-b border-slate-200 pb-6">
+    <h2 class="text-base font-semibold text-ink">Your parking data</h2>
+    <%= link_to "Download my parking data", privacy_data_path, class: "inline-block text-navy underline", data: { turbo: false } %>
+    <%= button_to "Delete my parking data", privacy_data_path, method: :delete,
+          form: { data: { turbo: false } }, class: "rounded-lg border border-red-300 px-4 py-2 font-semibold text-red-700" %>
+  </section>
+
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Who is responsible</h2>
+    <p>ParkBack is operated by Lovely Joy Figueras. For privacy questions, access, correction, deletion, or complaints, contact <%= mail_to "lovelyfigueras@gmail.com", "lovelyfigueras@gmail.com", class: "break-all text-navy underline" %>.</p>
+  </section>
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Parking information</h2>
+    <p>When you save a spot, ParkBack stores its GPS coordinates, accuracy, time, vehicle type, the details you enter, and an optional photo. A random signed browser cookie links that spot to your browser; it is not a login or an anonymous guarantee.</p>
+    <p>Parking information is used to provide the parking-retrieval service you request. Your current walking location and compass readings are processed in your browser for navigation, not continuously saved to the parking database.</p>
+    <p>Do not upload faces, license plates, documents, or other people's identifying information unless necessary and you have authority to do so. Photos may contain embedded metadata. Do not submit sensitive personal information in free-text fields.</p>
+  </section>
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Optional services</h2>
+    <p>Analytics and maps are disabled unless you select them above. Either can be refused without preventing GPS distance and direction from working. With analytics enabled, Google receives visit information such as sanitized page URLs, device information, and a cookie-based identifier. Parking coordinates, details, photos, and browser ownership tokens are not sent as analytics event properties.</p>
+    <p>With maps enabled, OpenStreetMap receives requests for map tiles covering your parked and current positions. unpkg supplies the map library and receives network information. You can withdraw either choice here. Withdrawal stops future requests from newly loaded ParkBack pages, not data already received by providers. Close or reload other open tabs after withdrawing.</p>
+  </section>
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Storage and access</h2>
+    <p>Render hosts the application and operational logs; Neon stores parking and attachment records. Optional services use Google, OpenStreetMap, and unpkg. These providers may process information outside the Philippines. Authorized operator access is limited to necessary support, security, and privacy-request handling; uploaded photos are not intended for public display.</p>
+    <p>Production photo uploads are unavailable while the app uses temporary disk storage. Older files may already be missing after a deployment or restart. A database attachment record does not guarantee that its photo can be recovered.</p>
+  </section>
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Retention and deletion</h2>
+    <p>Parking spots expire seven days after saving. Expired spots are blocked from normal access and removed by the cleanup process; on free hosting, cleanup happens on subsequent requests or when the operator runs the cleanup task. It is not guaranteed to execute at the exact seven-day mark.</p>
+    <p>Use "Delete my parking data" to remove all records and photos linked to this browser, or clear an individual spot when you find your vehicle. The ownership cookie lasts up to seven days after use; the privacy-choice cookie lasts up to 180 days. Logs, backups, and optional analytics have separate provider retention settings that require operator management.</p>
+    <p>Clearing cookies removes the link to your records, not necessarily the records themselves. If you lose that link, contact the privacy address; access or deletion requests require proportionate verification without disclosing another person's data.</p>
+  </section>
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-ink">Your rights</h2>
+    <p>You may request information about processing, access or a copy of your data, correction, deletion or blocking where applicable, and object to processing or withdraw optional consent. You may also lodge a complaint with the <%= link_to "National Privacy Commission", "https://privacy.gov.ph/", class: "text-navy underline", rel: "noopener noreferrer" %>.</p>
+  </section>
+
+  <%= link_to "Back to ParkBack", root_path, class: "inline-block text-navy underline", data: { turbo: false } %>
+</section>

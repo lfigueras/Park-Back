@@ -44,11 +44,15 @@
   </p>
 
   <%# Map %>
-  <div data-finder-target="map" class="h-72 w-full overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200/70"></div>
+  <% if maps_allowed? %>
+    <div data-finder-target="map" class="h-72 w-full overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200/70"></div>
+  <% else %>
+    <p class="text-center text-xs text-slate-500">Maps are off. <%= link_to "Privacy choices", privacy_path, class: "text-navy underline", data: { turbo: false } %></p>
+  <% end %>
 
   <%# Saved details %>
   <% if @parking_location.photo.attached? %>
-    <%= image_tag @parking_location.photo, class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
+    <%= image_tag photo_parking_location_path(@parking_location), class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
   <% end %>
 
   <% details = {

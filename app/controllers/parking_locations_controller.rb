@@ -1,5 +1,6 @@
 class ParkingLocationsController < ApplicationController
-  before_action :set_parking_location, only: %i[show destroy]
+  before_action :set_parking_location, only: %i[show destroy photo]
+  before_action :prevent_private_caching
 
   # Landing page: if the browser already saved a car, jump straight to it.
   # Otherwise show the "Save Parking Location" form.
@@ -33,16 +34,31 @@ class ParkingLocationsController < ApplicationController
   def show
   end
 
+  def photo
+    return head :not_found unless @parking_location.photo.attached?
+
+    attachment = @parking_location.photo
+    send_data attachment.download, type: attachment.content_type,
+      disposition: :inline, filename: "parking-photo#{attachment.filename.extension_with_delimiter}"
+  rescue ActiveStorage::FileNotFoundError
+    head :not_found
+  end
+
   def destroy
     vehicle_type = @parking_location.vehicle_type
-    @parking_location.destroy
+    @parking_location.destroy_with_photo!
     redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}!"
   end
 
   private
 
+  def prevent_private_caching
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Referrer-Policy"] = "no-referrer"
+  end
+
   def set_parking_location
-    @parking_location = ParkingLocation.for_token(browser_token).find(params[:id])
+    @parking_location = ParkingLocation.for_token(browser_token).active.find(params[:id])
   rescue ActiveRecord::RecordNotFound
     redirect_to root_path, alert: "That parking record is no longer available."
   end

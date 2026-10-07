@@ -4,6 +4,19 @@ import "controllers"
 
 const measurementId = document.querySelector('meta[name="ga4-measurement-id"]')?.content
 
+window.addEventListener("storage", event => {
+	if (event.key !== "parkback_privacy_updated" || !event.newValue) return
+	if (measurementId) window["ga-disable-" + measurementId] = true
+	window.location.reload()
+})
+
+document.addEventListener("turbo:load", () => {
+	if (!document.querySelector('meta[name="privacy-choices-updated"]')) return
+	try {
+		window.localStorage.setItem("parkback_privacy_updated", String(Date.now()))
+	} catch {}
+})
+
 function analyticsUrl(value) {
 	try {
 		const url = new URL(value)

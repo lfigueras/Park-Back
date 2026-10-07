@@ -13,7 +13,6 @@ export default class extends Controller {
     this.map = null
     this.marker = null
     this.locationReady = false
-    this.locate()
     this.refreshSubmit()
   }
 
