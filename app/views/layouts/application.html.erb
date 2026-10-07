@@ -6,6 +6,11 @@
     <% share_image_url = "#{request.base_url}/parkback-share.png" %>
     <title><%= page_title %></title>
     <meta name="description" content="<%= page_description %>">
+    <% if controller_path == "parking_locations" && %w[index new].include?(action_name) %>
+      <%= tag.link rel: "canonical", href: root_url %>
+    <% elsif controller_path == "parking_locations" && action_name == "show" %>
+      <meta name="robots" content="noindex, nofollow">
+    <% end %>
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="ParkBack">
     <meta property="og:title" content="<%= page_title %>">

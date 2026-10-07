@@ -1,4 +1,4 @@
-<% content_for :title, "ParkBack" %>
+<% content_for :title, "ParkBack | Save your parking location" %>
 
 <div data-controller="locator" data-locator-map-permission-url-value="<%= privacy_maps_path %>" data-locator-maps-declined-value="<%= privacy_preferences["maps"] == false %>">
   <%= form_with model: @parking_location, url: parking_locations_path, method: :post, html: { multipart: true, class: "space-y-5", data: { action: "input->locator#refreshSubmit change->locator#refreshSubmit" } } do |f| %>
@@ -13,8 +13,8 @@
     <% end %>
 
     <section class="space-y-1 text-center">
-      <h1 class="text-2xl font-bold text-ink">Where did you park?</h1>
-      <p class="text-sm text-slate-500">We'll capture your GPS spot so you can find your way back later.</p>
+      <h1 class="text-2xl font-bold text-ink">ParkBack parking locator</h1>
+      <p class="text-sm leading-6 text-slate-500">Remember where you parked your car, motorcycle, bicycle or truck. Save your GPS parking location and details, then find your way back with a map, distance and direction. No account required.</p>
     </section>
 
     <%# Vehicle type selector %>
