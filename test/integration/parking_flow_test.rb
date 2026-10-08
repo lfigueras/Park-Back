@@ -321,8 +321,8 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_select "title", "ParkBack | Save your parking location"
     assert_select 'meta[property="og:title"][content="ParkBack | Save your parking location"]'
     assert_select 'link[rel="canonical"][href="http://www.example.com/"]'
-    assert_select "h1", "ParkBack parking locator"
-    assert_includes response.body, "No account required."
+    assert_select "h1", "Where did you park?"
+    assert_includes response.body, "Save your parking spot and find your way back."
     assert_select 'meta[name="robots"][content*="noindex"]', count: 0
     assert_select 'meta[property="og:description"]'
     assert_select 'meta[property="og:image"][content=?]', "http://www.example.com/parkback-share.png"
