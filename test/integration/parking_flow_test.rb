@@ -519,7 +519,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select '[data-controller="flash"][data-turbo-temporary][role="status"] [data-flash-message]', text: "Parking spot saved!"
     assert_select ".flash-stack[data-turbo-temporary]", count: 1
-    assert_select '[data-controller="flash"][data-flash-delay-value="2000"] button[aria-label="Dismiss notification"]', count: 1
+    assert_select '[data-controller="flash"][data-flash-delay-value="3000"] button[aria-label="Dismiss notification"]', count: 1
 
     # Same browser (cookies carried over) is redirected to its car.
     get root_path, headers: modern_headers
@@ -543,7 +543,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     other.get parking_location_path(created), headers: modern_headers
     other.assert_redirected_to root_path
     other.follow_redirect!
-    other.assert_select '.flash-stack [role="alert"][data-flash-delay-value="2000"] [data-flash-message]',
+    other.assert_select '.flash-stack [role="alert"][data-flash-delay-value="3000"] [data-flash-message]',
       text: "That parking record is no longer available."
     other.assert_select '[role="alert"] button[aria-label="Dismiss notification"]', count: 1
   end

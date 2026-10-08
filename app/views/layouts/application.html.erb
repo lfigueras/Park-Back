@@ -82,7 +82,7 @@
           <% [[:notice, notice], [:alert, alert]].each do |kind, message| %>
             <% next if message.blank? %>
             <div class="flash-toast flash-toast--<%= kind %>" data-controller="flash" data-turbo-temporary
-                data-flash-delay-value="2000" role="<%= kind == :notice ? 'status' : 'alert' %>">
+                data-flash-delay-value="3000" role="<%= kind == :notice ? 'status' : 'alert' %>">
               <span data-flash-message><%= message %></span>
               <button type="button" class="flash-dismiss" data-action="flash#dismiss"
                       aria-label="Dismiss notification" title="Dismiss notification">
