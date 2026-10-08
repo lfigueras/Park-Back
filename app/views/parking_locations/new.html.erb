@@ -100,7 +100,7 @@
         </div>
         <% if ParkingLocation.photo_uploads_available? %>
         <div data-controller="photo">
-          <p class="mb-1 text-xs text-slate-500">Photo of the area</p>
+          <p class="mb-1 text-xs text-slate-500">Photo of the area (up to 5 MB)</p>
 
           <%= f.file_field :photo, accept: "image/*",
                 data: { photo_target: "input", action: "photo#preview" }, class: "hidden" %>

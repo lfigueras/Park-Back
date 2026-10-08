@@ -105,6 +105,31 @@ can reduce counts, and traffic before installation is not recovered.
 
 ## Privacy safeguards and rollout
 
+### Persistent photos on Neon
+
+Production uses the private `neon` Active Storage service when all three required
+settings are present in Render: `NEON_STORAGE_ENDPOINT`,
+`NEON_STORAGE_ACCESS_KEY_ID`, and `NEON_STORAGE_SECRET_ACCESS_KEY`. Optional
+settings are `NEON_STORAGE_REGION` (default `ap-southeast-1`) and
+`NEON_STORAGE_BUCKET` (default `parkback-photos`). Use the production branch's S3
+endpoint and a storage-only credential; never use the Postgres password or commit
+credentials. Neon maps `token_id` to the access key and `s3_secret_access_key` to
+the secret key. Without complete settings, production falls back to Disk and
+photo uploads stay blocked. Development and tests continue using Disk.
+
+The S3 adapter requires path-style addressing and a private bucket. Files are
+uploaded through Rails and downloaded only through the existing browser-owner
+routes; public Active Storage routes remain disabled. Uploads are limited to
+5 MB. Existing blobs keep their original service name; do not relabel old Disk
+blobs as Neon objects. Missing old files cannot be recovered by configuration.
+
+Verify upload, exact download, anonymous-read denial, and deletion with a
+disposable object before enabling the production UI. Neon soft-deletes objects
+on the current branch; retained provider history or other branches are not a
+promise of immediate physical erasure. Monitor both the 5 GB Free object-storage
+allowance and shared network transfer. Originals may contain EXIF metadata;
+metadata stripping remains a separate task.
+
 - Browser ownership cookies are signed, HttpOnly, SameSite=Lax, and Secure on
    HTTPS, with a rolling seven-day expiry. Existing ownership tokens are preserved.
 - Public Active Storage routes are disabled. Parking photos require the owning
@@ -124,7 +149,7 @@ can reduce counts, and traffic before installation is not recovered.
 - New production photo uploads fail closed while Active Storage uses Disk.
    Existing attachments remain readable if their files exist. Enable uploads only
    after configuring durable private storage and verifying upload/download/purge.
-   This change does not provision storage or recover erased files. Originals may
+   Switching storage does not recover erased files. Originals may
    contain EXIF metadata; automatic metadata stripping is not implemented.
 
 Before rollout, preserve recoverable temporary uploads if possible, review

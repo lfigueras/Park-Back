@@ -21,8 +21,8 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  storage_keys = %w[NEON_STORAGE_ENDPOINT NEON_STORAGE_ACCESS_KEY_ID NEON_STORAGE_SECRET_ACCESS_KEY]
+  config.active_storage.service = storage_keys.all? { |key| ENV[key].present? } ? :neon : :local
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true

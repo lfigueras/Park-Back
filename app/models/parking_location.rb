@@ -1,3 +1,5 @@
+require "active_storage/service/disk_service"
+
 class ParkingLocation < ApplicationRecord
   has_one_attached :photo
 
@@ -48,6 +50,7 @@ class ParkingLocation < ApplicationRecord
 
   def photo_is_an_image
     return unless photo.attached?
+    errors.add(:photo, "must be 5 MB or smaller") if photo.byte_size > 5.megabytes
     return if photo.content_type.in?(%w[image/png image/jpeg image/jpg image/webp image/heic])
 
     errors.add(:photo, "must be a PNG, JPEG, WEBP, or HEIC image")
