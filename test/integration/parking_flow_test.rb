@@ -8,6 +8,53 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     { "HTTP_USER_AGENT" => CHROME_UA }
   end
 
+  test "aggregate page views count refreshes without analytics consent" do
+    2.times { get root_path, headers: modern_headers }
+    assert_response :success
+    assert_equal 2, DailyPageView.where(page: "save").pick(:views)
+    assert_equal %w[date page views], DailyPageView.column_names.sort
+    assert_select 'script[src*="googletagmanager.com"]', count: 0
+    get privacy_path, headers: modern_headers
+    assert_includes response.body, "Separately from Google Analytics, we count daily page views"
+    assert_equal 2, DailyPageView.sum(:views)
+  end
+
+  test "aggregate counts skip redirects and count the final find page" do
+    post parking_locations_path, params: {
+      parking_location: { latitude: 14.585, longitude: 121.056, slot: "counter-test" }
+    }, headers: modern_headers
+    assert_equal 0, DailyPageView.count
+    get root_path, headers: modern_headers
+    assert_response :redirect
+    assert_equal 0, DailyPageView.count
+    follow_redirect!
+    assert_equal 1, DailyPageView.where(page: "find").pick(:views)
+    assert_equal 1, DailyPageView.sum(:views)
+  end
+
+  test "aggregate counts exclude HEAD requests bots and non-parking pages" do
+    head root_path, headers: modern_headers
+    assert_response :success
+    get root_path, headers: modern_headers.merge("HTTP_USER_AGENT" => "#{CHROME_UA} ExampleCrawler")
+    assert_response :success
+    get privacy_path, headers: modern_headers
+    get "/up", headers: modern_headers
+    get "/parking_locations/99999999", headers: modern_headers
+    assert_equal 0, DailyPageView.count
+  end
+
+  test "counter failure does not prevent using the parking form" do
+    previous_recorder = DailyPageView.method(:record!)
+    DailyPageView.define_singleton_method(:record!) do |_page|
+      raise ActiveRecord::ConnectionNotEstablished
+    end
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_select "[data-controller=locator]"
+  ensure
+    DailyPageView.define_singleton_method(:record!, previous_recorder) if previous_recorder
+  end
+
   test "root shows the save form when no car is saved" do
     get root_path, headers: modern_headers
     assert_response :success
@@ -348,7 +395,9 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_redirected_to parking_location_path(created)
 
     follow_redirect!
-    assert_select '[data-controller="flash"][data-turbo-temporary][role="status"]', text: "Parking spot saved!"
+    assert_select '[data-controller="flash"][data-turbo-temporary][role="status"] [data-flash-message]', text: "Parking spot saved!"
+    assert_select ".flash-stack[data-turbo-temporary]", count: 1
+    assert_select '[data-controller="flash"][data-flash-delay-value="2000"] button[aria-label="Dismiss notification"]', count: 1
 
     # Same browser (cookies carried over) is redirected to its car.
     get root_path, headers: modern_headers
@@ -371,6 +420,10 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     other = open_session
     other.get parking_location_path(created), headers: modern_headers
     other.assert_redirected_to root_path
+    other.follow_redirect!
+    other.assert_select '.flash-stack [role="alert"][data-flash-delay-value="2000"] [data-flash-message]',
+      text: "That parking record is no longer available."
+    other.assert_select '[role="alert"] button[aria-label="Dismiss notification"]', count: 1
   end
 
   test "returning after hours preserves the spot even when its photo file disappears" do
@@ -447,7 +500,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "glad you found your motorcycle!", response.body
-    assert_select '[data-controller="flash"][role="status"]',
+    assert_select '[data-controller="flash"][role="status"] [data-flash-message]',
       text: "Nice \u2014 glad you found your motorcycle! Your saved spot has been deleted."
   end
 

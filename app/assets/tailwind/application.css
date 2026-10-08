@@ -8,3 +8,75 @@
   --color-cream: #f1efe7;
   --color-ink: #233247;
 }
+
+.flash-stack {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 2000;
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.flash-toast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #a7f3d0;
+  border-left: 3px solid #059669;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #065f46;
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 14%);
+  pointer-events: auto;
+  animation: flash-enter 250ms ease-out;
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+.flash-toast--alert {
+  border-color: #fecdd3;
+  border-left-color: #e11d48;
+  color: #9f1239;
+}
+
+.flash-toast--leaving {
+  animation: none;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.flash-dismiss {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.flash-dismiss:hover,
+.flash-dismiss:focus-visible {
+  background: rgb(0 0 0 / 5%);
+}
+
+@keyframes flash-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-toast {
+    animation: none;
+    transition: none;
+  }
+}

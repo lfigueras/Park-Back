@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_060037) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_060037) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "daily_page_views", id: false, force: :cascade do |t|
+    t.date "date", null: false
+    t.string "page", null: false
+    t.bigint "views", default: 0, null: false
+    t.index ["date", "page"], name: "index_daily_page_views_on_date_and_page", unique: true
+    t.check_constraint "page::text = ANY (ARRAY['save'::character varying, 'find'::character varying]::text[])", name: "daily_page_views_known_page"
+    t.check_constraint "views >= 0", name: "daily_page_views_nonnegative"
   end
 
   create_table "parking_locations", force: :cascade do |t|

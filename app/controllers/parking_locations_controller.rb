@@ -1,6 +1,7 @@
 class ParkingLocationsController < ApplicationController
   before_action :set_parking_location, only: %i[show destroy photo]
   before_action :prevent_private_caching
+  after_action :record_page_view, only: %i[index new show]
 
   # Landing page: if the browser already saved a car, jump straight to it.
   # Otherwise show the "Save Parking Location" form.
@@ -59,6 +60,15 @@ class ParkingLocationsController < ApplicationController
   end
 
   private
+
+  def record_page_view
+    return unless request.get? && response.status == 200 && response.media_type == "text/html"
+    return if request.user_agent.to_s.match?(/bot|crawler|spider|headless|preview|curl|wget/i)
+
+    DailyPageView.record!(action_name == "show" ? "find" : "save")
+  rescue ActiveRecord::ActiveRecordError => error
+    Rails.logger.warn("Aggregate page-view count skipped (#{error.class.name})")
+  end
 
   def prevent_private_caching
     response.headers["Cache-Control"] = "no-store, private"

@@ -49,6 +49,12 @@ Optional analytics: set `GA4_MEASUREMENT_ID` and disable GA4's automatic/enhance
 measurement because the app sends pageviews itself. Analytics requires opt-in;
 counts estimate browsers/devices, not exact people.
 
+Aggregate page views are separate from GA4: only UTC date, `save`/`find` category
+and count are stored. Reports cover 90 days; new views trigger older-total cleanup.
+Run `bin/rails traffic:report` against the
+intended database or view `daily_page_views` in Neon's SQL Editor. Refreshes count
+again; basic bot filtering is not exhaustive. This does not count unique users.
+
 ## Privacy
 
 Maps are on by default and can be disabled; GPS requires the location button.
