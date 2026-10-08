@@ -347,6 +347,9 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     created = ParkingLocation.last
     assert_redirected_to parking_location_path(created)
 
+    follow_redirect!
+    assert_select '[data-controller="flash"][data-turbo-temporary][role="status"]', text: "Parking spot saved!"
+
     # Same browser (cookies carried over) is redirected to its car.
     get root_path, headers: modern_headers
     assert_redirected_to parking_location_path(created)
@@ -421,6 +424,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_not blob.service.exist?(blob.key)
     follow_redirect!
     assert_includes response.body, "Your saved spot and photo have been deleted."
+    assert_select '[data-controller="flash"][data-turbo-temporary][role="status"]', count: 1
     assert_includes response.body, "Uncleared spots expire after seven days."
   ensure
     created&.photo&.purge if created && ParkingLocation.exists?(created.id)
@@ -443,6 +447,8 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "glad you found your motorcycle!", response.body
+    assert_select '[data-controller="flash"][role="status"]',
+      text: "Nice \u2014 glad you found your motorcycle! Your saved spot has been deleted."
   end
 
   test "saving is rejected when no detail is provided" do

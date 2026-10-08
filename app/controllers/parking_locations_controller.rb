@@ -49,8 +49,13 @@ class ParkingLocationsController < ApplicationController
 
   def destroy
     vehicle_type = @parking_location.vehicle_type
+    deletion_message = if @parking_location.photo.attached?
+      "Your saved spot and photo have been deleted."
+    else
+      "Your saved spot has been deleted."
+    end
     @parking_location.destroy_with_photo!
-    redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}! Your saved spot and photo have been deleted."
+    redirect_to root_path, notice: "Nice \u2014 glad you found your #{vehicle_type}! #{deletion_message}"
   end
 
   private
