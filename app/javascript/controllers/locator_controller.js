@@ -8,24 +8,27 @@ export default class extends Controller {
 
   static targets = [
     "latitude", "longitude", "accuracy",
-    "status", "accuracyText", "submit", "map", "retry", "hint"
+    "status", "accuracyText", "submit", "map", "retry", "hint",
+    "gpsUnavailable", "details", "detailsHint", "photoLabel"
   ]
 
   connect() {
     this.map = null
     this.marker = null
-    this.locationReady = false
+    this.locationReady = this.latitudeTarget.value !== "" && this.longitudeTarget.value !== ""
+    this.gpsUnavailable = this.hasGpsUnavailableTarget && this.gpsUnavailableTarget.value === "1"
     this.mapLibraryPromise = null
+    if (this.gpsUnavailable) this.setStatus("GPS unavailable. Add a photo or try again.", "error")
     this.refreshSubmit()
-    if (!this.mapsDeclinedValue) this.showInitialMap()
+    if (!this.mapsDeclinedValue && !this.gpsUnavailable) this.showInitialMap()
   }
 
   async showInitialMap() {
     try {
       await this.loadMapLibrary()
-      if (this.element.isConnected) this.renderMap(20, 0, false)
+      if (this.element.isConnected && !this.gpsUnavailable) this.renderMap(20, 0, false)
     } catch {
-      if (this.element.isConnected && !this.locationReady) {
+      if (this.element.isConnected && !this.locationReady && !this.gpsUnavailable) {
         this.setStatus("Map unavailable right now. You can still use GPS.", "pending")
       }
     }
@@ -47,6 +50,8 @@ export default class extends Controller {
     this.setStatus("Getting your location…", "pending")
     if (this.hasRetryTarget) this.retryTarget.classList.add("hidden")
     this.locationReady = false
+    this.gpsUnavailable = false
+    this.clearCoordinates()
     this.refreshSubmit()
 
     navigator.geolocation.getCurrentPosition(
@@ -69,6 +74,7 @@ export default class extends Controller {
       this.accuracyTextTarget.textContent = `±${Math.round(accuracy)} m accuracy`
     }
     this.locationReady = true
+    this.gpsUnavailable = false
     this.refreshSubmit()
     if (this.hasRetryTarget) this.retryTarget.classList.remove("hidden")
 
@@ -129,17 +135,46 @@ export default class extends Controller {
   }
 
   fail(message) {
+    if (!this.element.isConnected) return
     this.setStatus(message, "error")
     if (this.hasRetryTarget) this.retryTarget.classList.remove("hidden")
     this.locationReady = false
+    this.gpsUnavailable = true
+    this.clearCoordinates()
+    if (this.hasDetailsTarget) this.detailsTarget.open = true
+    if (this.map) this.map.remove()
+    this.map = null
+    this.marker = null
+    if (this.hasMapTarget) this.mapTarget.classList.add("hidden")
     this.refreshSubmit()
   }
 
-  // Enable saving only once we have a GPS fix AND at least one detail filled.
+  clearCoordinates() {
+    this.latitudeTarget.value = ""
+    this.longitudeTarget.value = ""
+    if (this.hasAccuracyTarget) this.accuracyTarget.value = ""
+    if (this.hasAccuracyTextTarget) this.accuracyTextTarget.textContent = ""
+  }
+
   refreshSubmit() {
-    const ready = this.locationReady && this.detailsFilled()
+    const file = this.element.querySelector("input[type=file]")
+    const photoSelected = !!(file && file.files && file.files.length > 0)
+    const ready = this.gpsUnavailable ? photoSelected : this.locationReady && this.detailsFilled()
+    if (file) file.required = !!this.gpsUnavailable
+    if (this.hasGpsUnavailableTarget) this.gpsUnavailableTarget.value = this.gpsUnavailable ? "1" : "0"
+    if (this.hasPhotoLabelTarget) {
+      this.photoLabelTarget.textContent = this.gpsUnavailable
+        ? "Photo required without GPS (up to 5 MB)"
+        : "Photo of the area (up to 5 MB)"
+    }
+    if (this.hasDetailsHintTarget) this.detailsHintTarget.textContent = this.gpsUnavailable ? "(photo required)" : "(optional)"
     if (this.hasSubmitTarget) this.submitTarget.disabled = !ready
-    if (this.hasHintTarget) this.hintTarget.classList.toggle("hidden", !this.locationReady || ready)
+    if (this.hasHintTarget) {
+      this.hintTarget.textContent = this.gpsUnavailable
+        ? (file ? "GPS is unavailable. Add a photo to save this spot without a map pin." : "GPS and photo uploads are unavailable. Try GPS again.")
+        : "Add at least one detail (mall, floor, section, slot, landmark, or photo) before saving."
+      this.hintTarget.classList.toggle("hidden", !(this.locationReady || this.gpsUnavailable) || ready)
+    }
   }
 
   detailsFilled() {
@@ -186,13 +221,13 @@ export default class extends Controller {
   messageFor(err) {
     switch (err.code) {
       case err.PERMISSION_DENIED:
-        return "Location permission denied. Enable it to save your spot."
+        return "Location permission denied. Add a photo or enable GPS."
       case err.POSITION_UNAVAILABLE:
-        return "Location unavailable right now. Try again."
+        return "Location unavailable. Add a photo or try again."
       case err.TIMEOUT:
-        return "Timed out getting your location. Try again."
+        return "GPS timed out. Add a photo or try again."
       default:
-        return "Couldn't get your location. Try again."
+        return "Couldn't get your location. Add a photo or try again."
     }
   }
 }

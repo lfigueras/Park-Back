@@ -8,10 +8,13 @@ class ParkingLocation < ApplicationRecord
   VEHICLE_TYPES = %w[car motorcycle bicycle truck].freeze
   DETAIL_FIELDS = %i[mall floor section slot landmark].freeze
 
-  validates :latitude, :longitude, :browser_token, :saved_at, presence: true
-  validates :latitude, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }
-  validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }
+  validates :browser_token, :saved_at, presence: true
+  validates :gps_unavailable, inclusion: { in: [ true, false ] }
+  validates :latitude, :longitude, presence: true, unless: :gps_unavailable?
+  validates :latitude, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }, unless: :gps_unavailable?
+  validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, unless: :gps_unavailable?
   validates :vehicle_type, inclusion: { in: VEHICLE_TYPES }
+  validate :photo_required_without_gps
   validate :photo_is_an_image
   validate :at_least_one_detail
   validate :photo_storage_is_durable, on: :create
@@ -35,12 +38,25 @@ class ParkingLocation < ApplicationRecord
     destroy!
   end
 
+  def gps_available?
+    !gps_unavailable? && latitude.present? && longitude.present?
+  end
+
   # The active (most recent) parking session for a given browser token.
   def self.current_for(token)
     for_token(token).active.order(saved_at: :desc).first
   end
 
   private
+
+  def photo_required_without_gps
+    return unless gps_unavailable?
+
+    errors.add(:photo, "is required when GPS is unavailable") unless photo.attached?
+    if latitude.present? || longitude.present? || accuracy.present?
+      errors.add(:base, "A spot saved without GPS cannot include GPS coordinates or accuracy.")
+    end
+  end
 
   def photo_storage_is_durable
     if photo.attached? && !self.class.photo_uploads_available?

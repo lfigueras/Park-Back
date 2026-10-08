@@ -7,7 +7,7 @@ class PrivacyController < ApplicationController
   def export
     records = ParkingLocation.for_token(browser_token).active.with_attached_photo.order(saved_at: :desc)
     data = records.map do |record|
-      record.as_json(only: %i[id latitude longitude accuracy vehicle_type mall floor section slot landmark saved_at]).merge(
+      record.as_json(only: %i[id latitude longitude accuracy gps_unavailable vehicle_type mall floor section slot landmark saved_at]).merge(
         "photo_url" => record.photo.attached? ? photo_parking_location_url(record) : nil)
     end
     send_data JSON.pretty_generate({ generated_at: Time.current.iso8601, parking_locations: data }),

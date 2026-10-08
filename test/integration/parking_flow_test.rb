@@ -8,14 +8,109 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     { "HTTP_USER_AGENT" => CHROME_UA }
   end
 
+  def with_parking_photo
+    Tempfile.create([ "parking", ".png" ]) do |file|
+      file.binmode
+      file.write(Base64.strict_decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII="))
+      file.flush
+      yield Rack::Test::UploadedFile.new(file.path, "image/png")
+    end
+  end
+
+  test "GPS fallback saves a private photo without a fake pin and can be exported and cleared" do
+    with_parking_photo do |photo|
+      assert_difference -> { ParkingLocation.count }, 1 do
+        post parking_locations_path, params: {
+          parking_location: { gps_unavailable: "1", photo: photo, slot: "Near the elevator" }
+        }, headers: modern_headers
+      end
+    end
+    spot = ParkingLocation.last
+    assert spot.gps_unavailable?
+    assert_nil spot.latitude
+    assert_nil spot.longitude
+    follow_redirect!
+    assert_response :success
+    assert_select '[data-controller="finder"][data-finder-gps-available-value="false"]'
+    assert_select "[data-finder-car-lat-value]", count: 0
+    assert_select "[data-finder-car-lng-value]", count: 0
+    assert_select '[data-finder-target="map"]', count: 0
+    assert_select '[data-finder-target="distance"]', count: 0
+    assert_select 'button[data-action="finder#refreshPosition"]', count: 0
+    assert_select 'script[src*="unpkg.com"]', count: 0
+    assert_select 'img[alt="Saved parking photo"]', count: 1
+    assert_includes response.body, "Saved without GPS"
+    get photo_parking_location_path(spot), headers: modern_headers
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    other = open_session
+    other.get photo_parking_location_path(spot), headers: modern_headers
+    other.assert_redirected_to root_path
+    get privacy_data_path, headers: modern_headers
+    exported = JSON.parse(response.body).fetch("parking_locations").first
+    assert_equal true, exported["gps_unavailable"]
+    assert_nil exported["latitude"]
+    blob = spot.photo.blob
+    assert_difference -> { ParkingLocation.count }, -1 do
+      delete parking_location_path(spot), headers: modern_headers
+    end
+    assert_not ActiveStorage::Blob.exists?(blob.id)
+    assert_not blob.service.exist?(blob.key)
+  ensure
+    spot&.destroy_with_photo! if spot && ParkingLocation.exists?(spot.id)
+  end
+
+  test "GPS fallback requires a photo even with text details" do
+    assert_no_difference -> { ParkingLocation.count } do
+      post parking_locations_path, params: {
+        parking_location: { gps_unavailable: "1", slot: "B2-147" }
+      }, headers: modern_headers
+    end
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Photo is required when GPS is unavailable"
+    assert_select 'input[name="parking_location[gps_unavailable]"][value="1"]'
+    assert_select 'input[type="file"][required]'
+  end
+
+  test "normal GPS mode still allows a text-only spot" do
+    assert_difference -> { ParkingLocation.count }, 1 do
+      post parking_locations_path, params: {
+        parking_location: { latitude: 0, longitude: 0, gps_unavailable: "0", slot: "A1" }
+      }, headers: modern_headers
+    end
+    spot = ParkingLocation.last
+    assert spot.gps_available?
+    assert_not spot.photo.attached?
+    follow_redirect!
+    assert_select '[data-finder-gps-available-value="true"]'
+  end
+
+  test "missing fallback photo does not pretend GPS is available" do
+    with_parking_photo do |photo|
+      post parking_locations_path, params: {
+        parking_location: { gps_unavailable: "1", photo: photo }
+      }, headers: modern_headers
+    end
+    spot = ParkingLocation.last
+    spot.photo.blob.service.delete(spot.photo.blob.key)
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "This spot was saved without GPS"
+    assert_select 'img[alt="Saved parking photo"]', count: 0
+    assert_select '[data-finder-target="map"]', count: 0
+  ensure
+    spot&.destroy_with_photo! if spot && ParkingLocation.exists?(spot.id)
+  end
+
   test "aggregate page views count refreshes without analytics consent" do
     2.times { get root_path, headers: modern_headers }
     assert_response :success
     assert_equal 2, DailyPageView.where(page: "save").pick(:views)
+    assert_equal 2, HourlyPageView.where(page: "save").sum(:views)
     assert_equal %w[date page views], DailyPageView.column_names.sort
     assert_select 'script[src*="googletagmanager.com"]', count: 0
     get privacy_path, headers: modern_headers
-    assert_includes response.body, "Separately from Google Analytics, we count daily page views"
+    assert_includes response.body, "Separately from Google Analytics, we count daily and hourly page views"
     assert_equal 2, DailyPageView.sum(:views)
   end
 
@@ -29,6 +124,7 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     assert_equal 0, DailyPageView.count
     follow_redirect!
     assert_equal 1, DailyPageView.where(page: "find").pick(:views)
+    assert_equal 1, HourlyPageView.where(page: "find").sum(:views)
     assert_equal 1, DailyPageView.sum(:views)
   end
 
@@ -41,11 +137,37 @@ class ParkingFlowTest < ActionDispatch::IntegrationTest
     get "/up", headers: modern_headers
     get "/parking_locations/99999999", headers: modern_headers
     assert_equal 0, DailyPageView.count
+    assert_equal 0, HourlyPageView.count
+  end
+
+  test "daily and hourly view counts share one timestamp across UTC midnight" do
+    travel_to Time.utc(2026, 10, 8, 23, 59, 59) do
+      get root_path, headers: modern_headers
+    end
+    travel_to Time.utc(2026, 10, 9, 0, 0, 1) do
+      get root_path, headers: modern_headers
+    end
+    assert_equal [ Date.new(2026, 10, 8), Date.new(2026, 10, 9) ], DailyPageView.order(:date).pluck(:date)
+    assert_equal [ Time.utc(2026, 10, 8, 23), Time.utc(2026, 10, 9, 0) ],
+      HourlyPageView.order(:hour_start).pluck(:hour_start)
+  end
+
+  test "hourly counter failure rolls back the daily increment without breaking the form" do
+    previous_recorder = HourlyPageView.method(:record!)
+    HourlyPageView.define_singleton_method(:record!) do |_page, **_options|
+      raise ActiveRecord::ConnectionNotEstablished
+    end
+    get root_path, headers: modern_headers
+    assert_response :success
+    assert_equal 0, DailyPageView.count
+    assert_equal 0, HourlyPageView.count
+  ensure
+    HourlyPageView.define_singleton_method(:record!, previous_recorder) if previous_recorder
   end
 
   test "counter failure does not prevent using the parking form" do
     previous_recorder = DailyPageView.method(:record!)
-    DailyPageView.define_singleton_method(:record!) do |_page|
+    DailyPageView.define_singleton_method(:record!) do |_page, **_options|
       raise ActiveRecord::ConnectionNotEstablished
     end
     get root_path, headers: modern_headers

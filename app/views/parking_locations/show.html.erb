@@ -2,8 +2,11 @@
 
 <div
   data-controller="finder"
+  data-finder-gps-available-value="<%= @parking_location.gps_available? %>"
+  <% if @parking_location.gps_available? %>
   data-finder-car-lat-value="<%= @parking_location.latitude %>"
   data-finder-car-lng-value="<%= @parking_location.longitude %>"
+  <% end %>
   data-finder-saved-at-value="<%= @parking_location.saved_at.iso8601 %>"
   data-finder-expires-at-value="<%= (@parking_location.saved_at + ParkingLocation::RETENTION_DAYS.days).iso8601 %>"
   data-finder-vehicle-value="<%= @parking_location.vehicle_type %>"
@@ -11,7 +14,7 @@
 >
   <section class="space-y-2 text-center">
     <h1 class="text-2xl font-bold text-ink">Find your <%= @parking_location.vehicle_type %></h1>
-    <p data-finder-target="status" class="text-sm text-slate-500">Locating you…</p>
+    <p data-finder-target="status" class="text-sm text-slate-500"><%= @parking_location.gps_available? ? "Locating you…" : "Saved without GPS. Use your photo and notes below." %></p>
     <span class="inline-flex items-center gap-1.5 rounded-full bg-navy px-3 py-1 text-xs font-medium capitalize text-white">
       <%= vehicle_icon(@parking_location.vehicle_type, css: "size-4") %>
       <%= @parking_location.vehicle_type %>
@@ -24,6 +27,7 @@
   </p>
 
   <%# Compass + distance %>
+  <% if @parking_location.gps_available? %>
   <div class="grid grid-cols-2 gap-3">
     <div class="flex flex-col items-center justify-center rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
       <div class="relative grid size-24 place-items-center rounded-full bg-mist/50 ring-1 ring-mist">
@@ -59,6 +63,9 @@
   <% else %>
     <p class="text-center text-xs text-slate-500">Maps are off. <%= link_to "Privacy choices", privacy_path, class: "text-navy underline", data: { turbo: false } %></p>
   <% end %>
+  <% else %>
+    <p class="text-center text-xs text-slate-500">Parked <span data-finder-target="elapsed">—</span> ago</p>
+  <% end %>
 
   <%# Saved details %>
   <% if @parking_location.photo.attached? %>
@@ -69,7 +76,11 @@
               class: "w-full rounded-2xl shadow-sm ring-1 ring-slate-200/70" %>
       <% end %>
       <p data-photo-target="unavailable" <%= "hidden" if @photo_available %> role="status" class="border-l-2 border-amber-400 pl-3 text-sm leading-6 text-slate-600">
-        Photo file is unavailable. Your saved parking location and details are still available.
+        <% if @parking_location.gps_available? %>
+          Photo file is unavailable. Your saved parking location and details are still available.
+        <% else %>
+          Photo file is unavailable. This spot was saved without GPS; any saved notes are shown below.
+        <% end %>
       </p>
     </div>
   <% end %>

@@ -65,7 +65,12 @@ class ParkingLocationsController < ApplicationController
     return unless request.get? && response.status == 200 && response.media_type == "text/html"
     return if request.user_agent.to_s.match?(/bot|crawler|spider|headless|preview|curl|wget/i)
 
-    DailyPageView.record!(action_name == "show" ? "find" : "save")
+    page = action_name == "show" ? "find" : "save"
+    viewed_at = Time.current
+    DailyPageView.transaction do
+      DailyPageView.record!(page, date: viewed_at.utc.to_date)
+      HourlyPageView.record!(page, at: viewed_at)
+    end
   rescue ActiveRecord::ActiveRecordError => error
     Rails.logger.warn("Aggregate page-view count skipped (#{error.class.name})")
   end
@@ -83,7 +88,7 @@ class ParkingLocationsController < ApplicationController
 
   def parking_location_params
     params.require(:parking_location).permit(
-      :latitude, :longitude, :accuracy, :vehicle_type,
+      :latitude, :longitude, :accuracy, :gps_unavailable, :vehicle_type,
       :mall, :floor, :section, :slot, :landmark, :photo
     )
   end

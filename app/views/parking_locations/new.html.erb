@@ -66,11 +66,12 @@
     <%= f.hidden_field :latitude, data: { locator_target: "latitude" } %>
     <%= f.hidden_field :longitude, data: { locator_target: "longitude" } %>
     <%= f.hidden_field :accuracy, data: { locator_target: "accuracy" } %>
+    <%= f.hidden_field :gps_unavailable, value: @parking_location.gps_unavailable? ? "1" : "0", data: { locator_target: "gpsUnavailable" } %>
 
     <%# Optional details %>
-    <details class="group rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70" open>
+    <details data-locator-target="details" class="group rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70" open>
       <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-900">
-        <span>Add details <span class="text-slate-400">(optional)</span></span>
+        <span>Add details <span data-locator-target="detailsHint" class="text-slate-400"><%= @parking_location.gps_unavailable? ? "(photo required)" : "(optional)" %></span></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 text-slate-400 transition group-open:rotate-180" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
         </svg>
@@ -100,9 +101,9 @@
         </div>
         <% if ParkingLocation.photo_uploads_available? %>
         <div data-controller="photo">
-          <p class="mb-1 text-xs text-slate-500">Photo of the area (up to 5 MB)</p>
+          <p data-locator-target="photoLabel" class="mb-1 text-xs text-slate-500"><%= @parking_location.gps_unavailable? ? "Photo required without GPS (up to 5 MB)" : "Photo of the area (up to 5 MB)" %></p>
 
-          <%= f.file_field :photo, accept: "image/*",
+          <%= f.file_field :photo, accept: "image/*", required: @parking_location.gps_unavailable?,
                 data: { photo_target: "input", action: "photo#preview" }, class: "hidden" %>
 
           <%# Preview (hidden until a photo is chosen) %>

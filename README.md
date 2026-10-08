@@ -8,7 +8,7 @@ trucks. No account required.
 
 ## Features
 
-- Save your GPS location with parking details and an optional photo (up to 5 MB).
+- Save GPS with details and an optional photo (up to 5 MB); without GPS, a photo is required.
 - View your saved spot, distance, direction, and OpenStreetMap map.
 - Clear your saved spot when you find your vehicle.
 - Private, browser-owned records with a seven-day expiry.
@@ -49,11 +49,15 @@ Optional analytics: set `GA4_MEASUREMENT_ID` and disable GA4's automatic/enhance
 measurement because the app sends pageviews itself. Analytics requires opt-in;
 counts estimate browsers/devices, not exact people.
 
-Aggregate page views are separate from GA4: only UTC date, `save`/`find` category
+Daily aggregate views are separate from GA4: only UTC date, `save`/`find` category
 and count are stored. Reports cover 90 days; new views trigger older-total cleanup.
 Run `bin/rails traffic:report` against the
 intended database or view `daily_page_views` in Neon's SQL Editor. Refreshes count
 again; basic bot filtering is not exhaustive. This does not count unique users.
+
+For time-of-day totals, run `bin/rails traffic:hourly` (UTC and Philippine time)
+or query `hourly_page_views`. Its `hour_start` is rounded to the UTC hour, not an
+individual visit timestamp. Existing daily counts have no recoverable time data.
 
 ## Privacy
 

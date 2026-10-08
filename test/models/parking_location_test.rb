@@ -35,6 +35,48 @@ class ParkingLocationTest < ActiveSupport::TestCase
     assert loc.errors[:vehicle_type].any?
   end
 
+  test "saves a photo-only spot when GPS is explicitly unavailable" do
+    spot = ParkingLocation.new(base_attrs.merge(latitude: nil, longitude: nil, gps_unavailable: true))
+    spot.photo.attach(io: StringIO.new(PNG), filename: "area.png", content_type: "image/png")
+    assert spot.save, spot.errors.full_messages.to_sentence
+    assert spot.reload.gps_unavailable?
+    assert_not spot.gps_available?
+    assert_nil spot.latitude
+    assert_nil spot.longitude
+  ensure
+    spot&.photo&.purge
+  end
+
+  test "text details cannot replace the required photo without GPS" do
+    spot = ParkingLocation.new(base_attrs.merge(latitude: nil, longitude: nil, gps_unavailable: true, slot: "A1"))
+    assert_not spot.valid?
+    assert_includes spot.errors[:photo], "is required when GPS is unavailable"
+  end
+
+  test "GPS fallback rejects leftover coordinates or accuracy" do
+    [ { latitude: 0 }, { longitude: 0 }, { accuracy: 10 } ].each do |remaining|
+      spot = ParkingLocation.new(base_attrs.merge(latitude: nil, longitude: nil, gps_unavailable: true).merge(remaining))
+      spot.photo.attach(io: StringIO.new(PNG), filename: "area.png", content_type: "image/png")
+      assert_not spot.valid?
+      assert_includes spot.errors[:base], "A spot saved without GPS cannot include GPS coordinates or accuracy."
+    end
+  end
+
+  test "photo does not bypass missing or invalid GPS in normal mode" do
+    [ { latitude: nil }, { longitude: nil }, { latitude: 91 }, { longitude: 181 } ].each do |coordinates|
+      spot = ParkingLocation.new(base_attrs.merge(coordinates))
+      spot.photo.attach(io: StringIO.new(PNG), filename: "area.png", content_type: "image/png")
+      assert_not spot.valid?
+    end
+  end
+
+  test "photo validation still applies to GPS fallback" do
+    spot = ParkingLocation.new(base_attrs.merge(latitude: nil, longitude: nil, gps_unavailable: true))
+    spot.photo.attach(io: StringIO.new("not an image"), filename: "notes.txt", content_type: "text/plain")
+    assert_not spot.valid?
+    assert_includes spot.errors[:photo], "must be a PNG, JPEG, WEBP, or HEIC image"
+  end
+
   test "rejects photos larger than five megabytes" do
     loc = ParkingLocation.new(base_attrs.merge(slot: "A1"))
     bytes = PNG.ljust(5.megabytes + 1, "\0")

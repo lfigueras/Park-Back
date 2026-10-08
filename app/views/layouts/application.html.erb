@@ -42,7 +42,7 @@
     <% end %>
 
     <%# Leaflet (OpenStreetMap) %>
-    <% if maps_allowed? && controller_path == "parking_locations" %>
+    <% if maps_allowed? && controller_path == "parking_locations" && !(@parking_location&.gps_unavailable?) %>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

@@ -8,7 +8,8 @@ export default class extends Controller {
     carLng: Number,
     savedAt: String,
     expiresAt: String,
-    vehicle: String
+    vehicle: String,
+    gpsAvailable: { type: Boolean, default: true }
   }
 
   static targets = [
@@ -27,7 +28,7 @@ export default class extends Controller {
     this.initMap()
     this.startClock()
     this.refreshPosition()
-    this.bindCompass()
+    if (this.hasCoordinates) this.bindCompass()
     document.addEventListener("visibilitychange", this.boundResume)
     window.addEventListener("pageshow", this.boundResume)
   }
@@ -46,6 +47,10 @@ export default class extends Controller {
     return [this.carLatValue, this.carLngValue]
   }
 
+  get hasCoordinates() {
+    return !this.hasGpsAvailableValue || this.gpsAvailableValue
+  }
+
   // SVG path (Material Symbols) for the saved vehicle's map marker.
   vehiclePath() {
     const paths = {
@@ -58,7 +63,7 @@ export default class extends Controller {
   }
 
   initMap() {
-    if (!this.hasMapTarget || typeof L === "undefined") return
+    if (!this.hasCoordinates || !this.hasMapTarget || typeof L === "undefined") return
 
     this.map = L.map(this.mapTarget, { zoomControl: true })
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -109,6 +114,7 @@ export default class extends Controller {
     }
 
     this.renderElapsed()
+    if (!this.hasCoordinates) return
     this.heading = null
     this.bearingToCar = null
     if (this.hasDistanceTarget) this.distanceTarget.textContent = "--"

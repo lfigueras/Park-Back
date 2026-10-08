@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,9 +51,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_040000) do
     t.check_constraint "views >= 0", name: "daily_page_views_nonnegative"
   end
 
+  create_table "hourly_page_views", id: false, force: :cascade do |t|
+    t.datetime "hour_start", null: false
+    t.string "page", null: false
+    t.bigint "views", default: 0, null: false
+    t.index ["hour_start", "page"], name: "index_hourly_page_views_on_hour_start_and_page", unique: true
+    t.check_constraint "EXTRACT(minute FROM hour_start) = 0::numeric AND EXTRACT(second FROM hour_start) = 0::numeric", name: "hourly_page_views_whole_hour"
+    t.check_constraint "page::text = ANY (ARRAY['save'::character varying, 'find'::character varying]::text[])", name: "hourly_page_views_known_page"
+    t.check_constraint "views >= 0", name: "hourly_page_views_nonnegative"
+  end
+
   create_table "parking_locations", force: :cascade do |t|
-    t.decimal "latitude", precision: 10, scale: 6, null: false
-    t.decimal "longitude", precision: 10, scale: 6, null: false
+    t.decimal "latitude", precision: 10, scale: 6
+    t.decimal "longitude", precision: 10, scale: 6
     t.float "accuracy"
     t.string "mall"
     t.string "floor"
@@ -65,7 +75,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_040000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "vehicle_type", default: "car", null: false
+    t.boolean "gps_unavailable", default: false, null: false
     t.index ["browser_token"], name: "index_parking_locations_on_browser_token"
+    t.check_constraint "gps_unavailable = false AND latitude IS NOT NULL AND longitude IS NOT NULL OR gps_unavailable = true AND latitude IS NULL AND longitude IS NULL AND accuracy IS NULL", name: "parking_locations_coordinate_state"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
