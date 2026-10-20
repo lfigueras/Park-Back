@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validPhotoKey(locationId, key) {
+      return key == null || key == locationId;
+    }
+
+    function validLocation(uid, locationId, data) {
+      return data.keys().hasAll([
+          'vehicleType', 'latitude', 'longitude', 'accuracy', 'gpsUnavailable',
+          'mall', 'floor', 'section', 'slot', 'landmark', 'savedAt', 'expiresAt', 'photoKey'
+        ])
+        && data.keys().hasOnly([
+          'vehicleType', 'latitude', 'longitude', 'accuracy', 'gpsUnavailable',
+          'mall', 'floor', 'section', 'slot', 'landmark', 'savedAt', 'expiresAt', 'photoKey'
+        ])
+        && data.vehicleType in ['car', 'motorcycle', 'bicycle', 'truck']
+        && data.gpsUnavailable is bool
+        && data.mall is string && data.mall.size() <= 120
+        && data.floor is string && data.floor.size() <= 120
+        && data.section is string && data.section.size() <= 120
+        && data.slot is string && data.slot.size() <= 120
+        && data.landmark is string && data.landmark.size() <= 500
+        && data.savedAt is timestamp
+        && data.expiresAt is timestamp
+        && data.expiresAt > data.savedAt
+        && validPhotoKey(locationId, data.photoKey)
+        && (
+          (data.latitude is number
+            && data.longitude is number
+            && data.latitude >= -90 && data.latitude <= 90
+            && data.longitude >= -180 && data.longitude <= 180
+            && (data.accuracy == null || (data.accuracy is number && data.accuracy >= 0))
+            && !data.gpsUnavailable)
+          ||
+          (data.latitude == null && data.longitude == null && data.accuracy == null
+            && data.gpsUnavailable && data.photoKey is string)
+        )
+        && (
+          data.mall.size() > 0 || data.floor.size() > 0 || data.section.size() > 0
+          || data.slot.size() > 0 || data.landmark.size() > 0 || data.photoKey is string
+        );
+    }
+
+    match /users/{uid}/parkingLocations/{locationId} {
+      allow get: if signedInAs(uid) && resource.data.expiresAt > request.time;
+      allow list: if signedInAs(uid);
+      allow create: if signedInAs(uid) && validLocation(uid, locationId, request.resource.data);
+      allow update: if false;
+      allow delete: if signedInAs(uid);
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        "parkingPhotos": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          "$spotId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['contentType', 'base64']) && newData.child('contentType').isString() && (newData.child('contentType').val() === 'image/png' || newData.child('contentType').val() === 'image/jpeg' || newData.child('contentType').val() === 'image/jpg' || newData.child('contentType').val() === 'image/webp' || newData.child('contentType').val() === 'image/heic') && newData.child('base64').isString() && newData.child('base64').val().length <= 7000000)",
+            "$other": {
+              ".validate": "$other === 'contentType' || $other === 'base64'"
+            }
+          }
+        }
+      }
+    }
+  }
+}
