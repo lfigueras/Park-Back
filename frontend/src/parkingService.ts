@@ -89,6 +89,16 @@ async function removePrivatePhoto(uid: string, photoKey: string) {
   await remove(privatePhotoRef(uid, photoKey))
 }
 
+async function removeOtherParkingSpots(uid: string, keepSpotId: string) {
+  const existing = await getDocs(locationsFor(uid))
+  const previousSpots = existing.docs.filter((record) => record.id !== keepSpotId)
+  await Promise.all(previousSpots.map(async (record) => {
+    const spot = record.data() as StoredSpot
+    if (spot.photoKey) await removePrivatePhoto(uid, spot.photoKey)
+    await deleteDoc(record.ref)
+  }))
+}
+
 function validateDraft(draft: SpotDraft) {
   if (draft.gpsUnavailable && !draft.photo) {
     throw new Error("Add a photo to save a spot without GPS.")
@@ -112,7 +122,7 @@ function validateDraft(draft: SpotDraft) {
   }
 }
 
-export async function createParkingSpot(uid: string, draft: SpotDraft): Promise<ParkingSpot> {
+export async function createParkingSpot(uid: string, draft: SpotDraft, replaceExisting = false): Promise<ParkingSpot> {
   if (!db || !realtimeDb) throw new Error("Firebase is not configured.")
   validateDraft(draft)
 
@@ -145,6 +155,8 @@ export async function createParkingSpot(uid: string, draft: SpotDraft): Promise<
     if (photoKey) await removePrivatePhoto(uid, photoKey).catch(() => undefined)
     throw error
   }
+
+  if (replaceExisting) await removeOtherParkingSpots(uid, spotRef.id)
 
   return asParkingSpot(spotRef.id, data)
 }

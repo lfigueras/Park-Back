@@ -26,7 +26,7 @@ function AppRoutes({ user, choices, setChoices }: { user: User | null; choices: 
     <main className="page-frame">
       {!firebaseConfigured ? <FirebaseSetup /> : !user ? <Loading label="Connecting securely…" /> : <Routes>
         <Route path="/" element={<Home user={user} />} />
-        <Route path="/new" element={<SavePage user={user} choices={choices} />} />
+        <Route path="/new" element={<SavePage user={user} choices={choices} replaceExisting />} />
         <Route path="/find/:id" element={<FindPage user={user} choices={choices} />} />
         <Route path="/privacy" element={<PrivacyPage user={user} choices={choices} setChoices={setChoices} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -95,7 +95,7 @@ function Home({ user }: { user: User }) {
   return <SavePage user={user} choices={readPrivacyChoices()} />
 }
 
-function SavePage({ user, choices }: { user: User; choices: PrivacyChoices }) {
+function SavePage({ user, choices, replaceExisting = false }: { user: User; choices: PrivacyChoices; replaceExisting?: boolean }) {
   const [draft, setDraft] = useState<SpotDraft>(emptyDraft)
   const [locationStatus, setLocationStatus] = useState("Location not requested")
   const [submitting, setSubmitting] = useState(false)
@@ -143,7 +143,7 @@ function SavePage({ user, choices }: { user: User; choices: PrivacyChoices }) {
     setSubmitting(true)
     setError("")
     try {
-      const spot = await createParkingSpot(user.uid, draft)
+      const spot = await createParkingSpot(user.uid, draft, replaceExisting)
       navigate(`/find/${spot.id}`)
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Could not save this spot. Try again.")
@@ -196,7 +196,7 @@ function SavePage({ user, choices }: { user: User; choices: PrivacyChoices }) {
         </fieldset>
       </div>
       {!canSave && (locationReady || draft.gpsUnavailable) && <p className="form-hint">{draft.gpsUnavailable ? "Add a photo to save without GPS." : "Add at least one detail or photo to save this spot."}</p>}
-      <p className="retention-note">Your spot and photo are deleted when you confirm you found your vehicle. Unfound spots expire after seven days. <Link to="/privacy">Privacy details</Link></p>
+      <p className="retention-note">Saving a different spot replaces your previous one. Your spot and photo are deleted when you confirm you found your vehicle. Unfound spots expire after seven days. <Link to="/privacy">Privacy details</Link></p>
       <button type="submit" className="button button-primary save-button" disabled={!canSave || submitting}>{submitting ? <><span className="button-spinner" /> Saving securely…</> : <><MapPin size={18} /> Save parking spot</>}</button>
     </form>
   </section>
